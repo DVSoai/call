@@ -27,6 +27,14 @@ sealed class CallEvent with _$CallEvent {
 
   const factory CallEvent.speakerToggled() = CallSpeakerToggled;
 
+  /// User chọn 1 thiết bị audio output cụ thể (loa ngoài/tai nghe dây/
+  /// Bluetooth...) từ danh sách trả về bởi [CallBloc.listAudioOutputs] —
+  /// khác speakerToggled (chỉ bật/tắt loa nhị phân).
+  const factory CallEvent.audioOutputSelected({
+    required String deviceId,
+    required bool isSpeaker,
+  }) = CallAudioOutputSelected;
+
   /// Internal — Timer 30s tự bắn khi outgoingRinging/incomingRinging quá
   /// lâu không ai bắt máy (xem CallBloc._startRingTimer). Không phải action
   /// user, tương tự signalingMessageReceived.

@@ -222,6 +222,64 @@ class _IncomingView extends StatelessWidget {
   }
 }
 
+/// Hiện bottom sheet liệt kê thiết bị audio output thật (loa ngoài, tai
+/// nghe áp tai, tai nghe dây, Bluetooth...) — không chỉ toggle nhị phân
+/// loa/tai như trước, để user chọn đúng thiết bị đang đeo (vd. đang đeo tai
+/// nghe Bluetooth nhưng muốn chuyển sang loa ngoài, hoặc ngược lại).
+Future<void> _showAudioOutputPicker(BuildContext context) async {
+  final bloc = context.read<CallBloc>();
+  final outputs = await bloc.listAudioOutputs();
+  if (!context.mounted) return;
+
+  if (outputs.isEmpty) {
+    // Không liệt kê được thiết bị (hiếm, tuỳ OS/thời điểm gọi) — fallback
+    // về toggle nhị phân loa/tai để không kẹt user không bấm được gì.
+    bloc.add(const CallEvent.speakerToggled());
+    return;
+  }
+
+  await showModalBottomSheet<void>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: outputs
+            .map((d) => ListTile(
+                  leading: Icon(_iconForAudioOutput(d.label)),
+                  title: Text(_labelForAudioOutput(d.label)),
+                  onTap: () {
+                    bloc.add(CallEvent.audioOutputSelected(
+                      deviceId: d.deviceId,
+                      isSpeaker: _isSpeakerOutput(d.label),
+                    ));
+                    Navigator.of(sheetContext).pop();
+                  },
+                ))
+            .toList(),
+      ),
+    ),
+  );
+}
+
+bool _isSpeakerOutput(String label) => label.toLowerCase().contains('speaker');
+
+IconData _iconForAudioOutput(String label) {
+  final l = label.toLowerCase();
+  if (l.contains('speaker')) return Icons.volume_up;
+  if (l.contains('bluetooth')) return Icons.bluetooth_audio;
+  if (l.contains('wired') || l.contains('headset') || l.contains('headphone')) return Icons.headset;
+  return Icons.hearing;
+}
+
+String _labelForAudioOutput(String label) {
+  final l = label.toLowerCase();
+  if (l.contains('speaker')) return 'Loa ngoài';
+  if (l.contains('bluetooth')) return label.isNotEmpty ? label : 'Bluetooth';
+  if (l.contains('wired') || l.contains('headset') || l.contains('headphone')) return 'Tai nghe';
+  if (l.contains('earpiece') || l.contains('receiver')) return 'Tai nghe thoại (áp tai)';
+  return label.isNotEmpty ? label : 'Thiết bị âm thanh';
+}
+
 class _InCallView extends StatelessWidget {
   const _InCallView({
     required this.state,
@@ -277,7 +335,7 @@ class _InCallView extends StatelessWidget {
               const SizedBox(width: 16),
               _ControlButton(
                 icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
-                onPressed: () => context.read<CallBloc>().add(const CallEvent.speakerToggled()),
+                onPressed: () => _showAudioOutputPicker(context),
               ),
               const SizedBox(width: 16),
               if (isVideo)

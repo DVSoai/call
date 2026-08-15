@@ -46,6 +46,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     on<CallCameraToggled>(_onCameraToggled);
     on<CallSwitchCameraRequested>(_onSwitchCameraRequested);
     on<CallSpeakerToggled>(_onSpeakerToggled);
+    on<CallAudioOutputSelected>(_onAudioOutputSelected);
     on<CallRingTimedOut>(_onRingTimedOut);
     on<CallSignalingMessageReceived>(_onSignalingMessageReceived);
     on<CallLocalIceCandidateGenerated>(_onLocalIceCandidateGenerated);
@@ -262,6 +263,17 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     final on = !state.isSpeakerOn;
     await _webRtcService?.setSpeakerphoneOn(on);
     emit(state.copyWith(isSpeakerOn: on));
+  }
+
+  /// Danh sách thiết bị audio output hiện có (loa ngoài, tai nghe dây,
+  /// Bluetooth...) để UI hiện bottom sheet cho user chọn đúng thiết bị —
+  /// xem call_page.dart. Trả rỗng nếu chưa có cuộc gọi nào (WebRtcService
+  /// chưa khởi tạo).
+  Future<List<MediaDeviceInfo>> listAudioOutputs() async => _webRtcService?.listAudioOutputs() ?? [];
+
+  Future<void> _onAudioOutputSelected(CallAudioOutputSelected event, Emitter<CallState> emit) async {
+    await _webRtcService?.selectAudioOutput(event.deviceId);
+    emit(state.copyWith(isSpeakerOn: event.isSpeaker));
   }
 
   /// 30s không ai bắt máy — tự huỷ giống Zalo/Messenger thay vì đổ chuông

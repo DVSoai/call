@@ -135,6 +135,13 @@ class WebRtcService {
 
   Future<void> setSpeakerphoneOn(bool enabled) => Helper.setSpeakerphoneOn(enabled);
 
+  /// Danh sách thiết bị audio output hiện có (loa ngoài, tai nghe dây,
+  /// Bluetooth...) — chỉ đầy đủ SAU khi đã getUserMedia() (xem docstring
+  /// Helper.cameras, áp dụng tương tự cho audiooutputs).
+  Future<List<MediaDeviceInfo>> listAudioOutputs() => Helper.audiooutputs;
+
+  Future<void> selectAudioOutput(String deviceId) => Helper.selectAudioOutput(deviceId);
+
   RTCPeerConnection _requirePeerConnection() {
     final pc = _peerConnection;
     if (pc == null) {

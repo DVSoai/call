@@ -56,7 +56,7 @@ extension CallEventPatterns on CallEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CallSignalingStarted value)?  signalingStarted,TResult Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult Function( CallAcceptRequested value)?  acceptRequested,TResult Function( CallRejectRequested value)?  rejectRequested,TResult Function( CallEndRequested value)?  endRequested,TResult Function( CallMuteToggled value)?  muteToggled,TResult Function( CallCameraToggled value)?  cameraToggled,TResult Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult Function( CallSpeakerToggled value)?  speakerToggled,TResult Function( CallRingTimedOut value)?  ringTimedOut,TResult Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult Function( CallTicked value)?  tick,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CallSignalingStarted value)?  signalingStarted,TResult Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult Function( CallAcceptRequested value)?  acceptRequested,TResult Function( CallRejectRequested value)?  rejectRequested,TResult Function( CallEndRequested value)?  endRequested,TResult Function( CallMuteToggled value)?  muteToggled,TResult Function( CallCameraToggled value)?  cameraToggled,TResult Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult Function( CallSpeakerToggled value)?  speakerToggled,TResult Function( CallAudioOutputSelected value)?  audioOutputSelected,TResult Function( CallRingTimedOut value)?  ringTimedOut,TResult Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult Function( CallTicked value)?  tick,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
@@ -68,7 +68,8 @@ return endRequested(_that);case CallMuteToggled() when muteToggled != null:
 return muteToggled(_that);case CallCameraToggled() when cameraToggled != null:
 return cameraToggled(_that);case CallSwitchCameraRequested() when switchCameraRequested != null:
 return switchCameraRequested(_that);case CallSpeakerToggled() when speakerToggled != null:
-return speakerToggled(_that);case CallRingTimedOut() when ringTimedOut != null:
+return speakerToggled(_that);case CallAudioOutputSelected() when audioOutputSelected != null:
+return audioOutputSelected(_that);case CallRingTimedOut() when ringTimedOut != null:
 return ringTimedOut(_that);case CallSignalingMessageReceived() when signalingMessageReceived != null:
 return signalingMessageReceived(_that);case CallLocalIceCandidateGenerated() when localIceCandidateGenerated != null:
 return localIceCandidateGenerated(_that);case CallRemoteStreamReceived() when remoteStreamReceived != null:
@@ -92,7 +93,7 @@ return tick(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CallSignalingStarted value)  signalingStarted,required TResult Function( CallOutgoingRequested value)  outgoingCallRequested,required TResult Function( CallAcceptRequested value)  acceptRequested,required TResult Function( CallRejectRequested value)  rejectRequested,required TResult Function( CallEndRequested value)  endRequested,required TResult Function( CallMuteToggled value)  muteToggled,required TResult Function( CallCameraToggled value)  cameraToggled,required TResult Function( CallSwitchCameraRequested value)  switchCameraRequested,required TResult Function( CallSpeakerToggled value)  speakerToggled,required TResult Function( CallRingTimedOut value)  ringTimedOut,required TResult Function( CallSignalingMessageReceived value)  signalingMessageReceived,required TResult Function( CallLocalIceCandidateGenerated value)  localIceCandidateGenerated,required TResult Function( CallRemoteStreamReceived value)  remoteStreamReceived,required TResult Function( CallPeerConnectionStateChanged value)  peerConnectionStateChanged,required TResult Function( CallTicked value)  tick,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CallSignalingStarted value)  signalingStarted,required TResult Function( CallOutgoingRequested value)  outgoingCallRequested,required TResult Function( CallAcceptRequested value)  acceptRequested,required TResult Function( CallRejectRequested value)  rejectRequested,required TResult Function( CallEndRequested value)  endRequested,required TResult Function( CallMuteToggled value)  muteToggled,required TResult Function( CallCameraToggled value)  cameraToggled,required TResult Function( CallSwitchCameraRequested value)  switchCameraRequested,required TResult Function( CallSpeakerToggled value)  speakerToggled,required TResult Function( CallAudioOutputSelected value)  audioOutputSelected,required TResult Function( CallRingTimedOut value)  ringTimedOut,required TResult Function( CallSignalingMessageReceived value)  signalingMessageReceived,required TResult Function( CallLocalIceCandidateGenerated value)  localIceCandidateGenerated,required TResult Function( CallRemoteStreamReceived value)  remoteStreamReceived,required TResult Function( CallPeerConnectionStateChanged value)  peerConnectionStateChanged,required TResult Function( CallTicked value)  tick,}){
 final _that = this;
 switch (_that) {
 case CallSignalingStarted():
@@ -104,7 +105,8 @@ return endRequested(_that);case CallMuteToggled():
 return muteToggled(_that);case CallCameraToggled():
 return cameraToggled(_that);case CallSwitchCameraRequested():
 return switchCameraRequested(_that);case CallSpeakerToggled():
-return speakerToggled(_that);case CallRingTimedOut():
+return speakerToggled(_that);case CallAudioOutputSelected():
+return audioOutputSelected(_that);case CallRingTimedOut():
 return ringTimedOut(_that);case CallSignalingMessageReceived():
 return signalingMessageReceived(_that);case CallLocalIceCandidateGenerated():
 return localIceCandidateGenerated(_that);case CallRemoteStreamReceived():
@@ -124,7 +126,7 @@ return tick(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CallSignalingStarted value)?  signalingStarted,TResult? Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult? Function( CallAcceptRequested value)?  acceptRequested,TResult? Function( CallRejectRequested value)?  rejectRequested,TResult? Function( CallEndRequested value)?  endRequested,TResult? Function( CallMuteToggled value)?  muteToggled,TResult? Function( CallCameraToggled value)?  cameraToggled,TResult? Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult? Function( CallSpeakerToggled value)?  speakerToggled,TResult? Function( CallRingTimedOut value)?  ringTimedOut,TResult? Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult? Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult? Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult? Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult? Function( CallTicked value)?  tick,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CallSignalingStarted value)?  signalingStarted,TResult? Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult? Function( CallAcceptRequested value)?  acceptRequested,TResult? Function( CallRejectRequested value)?  rejectRequested,TResult? Function( CallEndRequested value)?  endRequested,TResult? Function( CallMuteToggled value)?  muteToggled,TResult? Function( CallCameraToggled value)?  cameraToggled,TResult? Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult? Function( CallSpeakerToggled value)?  speakerToggled,TResult? Function( CallAudioOutputSelected value)?  audioOutputSelected,TResult? Function( CallRingTimedOut value)?  ringTimedOut,TResult? Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult? Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult? Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult? Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult? Function( CallTicked value)?  tick,}){
 final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
@@ -136,7 +138,8 @@ return endRequested(_that);case CallMuteToggled() when muteToggled != null:
 return muteToggled(_that);case CallCameraToggled() when cameraToggled != null:
 return cameraToggled(_that);case CallSwitchCameraRequested() when switchCameraRequested != null:
 return switchCameraRequested(_that);case CallSpeakerToggled() when speakerToggled != null:
-return speakerToggled(_that);case CallRingTimedOut() when ringTimedOut != null:
+return speakerToggled(_that);case CallAudioOutputSelected() when audioOutputSelected != null:
+return audioOutputSelected(_that);case CallRingTimedOut() when ringTimedOut != null:
 return ringTimedOut(_that);case CallSignalingMessageReceived() when signalingMessageReceived != null:
 return signalingMessageReceived(_that);case CallLocalIceCandidateGenerated() when localIceCandidateGenerated != null:
 return localIceCandidateGenerated(_that);case CallRemoteStreamReceived() when remoteStreamReceived != null:
@@ -159,7 +162,7 @@ return tick(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  signalingStarted,TResult Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult Function()?  acceptRequested,TResult Function()?  rejectRequested,TResult Function()?  endRequested,TResult Function()?  muteToggled,TResult Function()?  cameraToggled,TResult Function()?  switchCameraRequested,TResult Function()?  speakerToggled,TResult Function( String roomId)?  ringTimedOut,TResult Function( SignalingMessage message)?  signalingMessageReceived,TResult Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult Function( MediaStream stream)?  remoteStreamReceived,TResult Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult Function()?  tick,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  signalingStarted,TResult Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult Function()?  acceptRequested,TResult Function()?  rejectRequested,TResult Function()?  endRequested,TResult Function()?  muteToggled,TResult Function()?  cameraToggled,TResult Function()?  switchCameraRequested,TResult Function()?  speakerToggled,TResult Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult Function( String roomId)?  ringTimedOut,TResult Function( SignalingMessage message)?  signalingMessageReceived,TResult Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult Function( MediaStream stream)?  remoteStreamReceived,TResult Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult Function()?  tick,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
 return signalingStarted();case CallOutgoingRequested() when outgoingCallRequested != null:
@@ -170,7 +173,8 @@ return endRequested();case CallMuteToggled() when muteToggled != null:
 return muteToggled();case CallCameraToggled() when cameraToggled != null:
 return cameraToggled();case CallSwitchCameraRequested() when switchCameraRequested != null:
 return switchCameraRequested();case CallSpeakerToggled() when speakerToggled != null:
-return speakerToggled();case CallRingTimedOut() when ringTimedOut != null:
+return speakerToggled();case CallAudioOutputSelected() when audioOutputSelected != null:
+return audioOutputSelected(_that.deviceId,_that.isSpeaker);case CallRingTimedOut() when ringTimedOut != null:
 return ringTimedOut(_that.roomId);case CallSignalingMessageReceived() when signalingMessageReceived != null:
 return signalingMessageReceived(_that.message);case CallLocalIceCandidateGenerated() when localIceCandidateGenerated != null:
 return localIceCandidateGenerated(_that.candidate);case CallRemoteStreamReceived() when remoteStreamReceived != null:
@@ -194,7 +198,7 @@ return tick();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  signalingStarted,required TResult Function( String calleeId,  bool isVideo)  outgoingCallRequested,required TResult Function()  acceptRequested,required TResult Function()  rejectRequested,required TResult Function()  endRequested,required TResult Function()  muteToggled,required TResult Function()  cameraToggled,required TResult Function()  switchCameraRequested,required TResult Function()  speakerToggled,required TResult Function( String roomId)  ringTimedOut,required TResult Function( SignalingMessage message)  signalingMessageReceived,required TResult Function( RTCIceCandidate candidate)  localIceCandidateGenerated,required TResult Function( MediaStream stream)  remoteStreamReceived,required TResult Function( RTCPeerConnectionState state)  peerConnectionStateChanged,required TResult Function()  tick,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  signalingStarted,required TResult Function( String calleeId,  bool isVideo)  outgoingCallRequested,required TResult Function()  acceptRequested,required TResult Function()  rejectRequested,required TResult Function()  endRequested,required TResult Function()  muteToggled,required TResult Function()  cameraToggled,required TResult Function()  switchCameraRequested,required TResult Function()  speakerToggled,required TResult Function( String deviceId,  bool isSpeaker)  audioOutputSelected,required TResult Function( String roomId)  ringTimedOut,required TResult Function( SignalingMessage message)  signalingMessageReceived,required TResult Function( RTCIceCandidate candidate)  localIceCandidateGenerated,required TResult Function( MediaStream stream)  remoteStreamReceived,required TResult Function( RTCPeerConnectionState state)  peerConnectionStateChanged,required TResult Function()  tick,}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted():
 return signalingStarted();case CallOutgoingRequested():
@@ -205,7 +209,8 @@ return endRequested();case CallMuteToggled():
 return muteToggled();case CallCameraToggled():
 return cameraToggled();case CallSwitchCameraRequested():
 return switchCameraRequested();case CallSpeakerToggled():
-return speakerToggled();case CallRingTimedOut():
+return speakerToggled();case CallAudioOutputSelected():
+return audioOutputSelected(_that.deviceId,_that.isSpeaker);case CallRingTimedOut():
 return ringTimedOut(_that.roomId);case CallSignalingMessageReceived():
 return signalingMessageReceived(_that.message);case CallLocalIceCandidateGenerated():
 return localIceCandidateGenerated(_that.candidate);case CallRemoteStreamReceived():
@@ -225,7 +230,7 @@ return tick();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  signalingStarted,TResult? Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult? Function()?  acceptRequested,TResult? Function()?  rejectRequested,TResult? Function()?  endRequested,TResult? Function()?  muteToggled,TResult? Function()?  cameraToggled,TResult? Function()?  switchCameraRequested,TResult? Function()?  speakerToggled,TResult? Function( String roomId)?  ringTimedOut,TResult? Function( SignalingMessage message)?  signalingMessageReceived,TResult? Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult? Function( MediaStream stream)?  remoteStreamReceived,TResult? Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult? Function()?  tick,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  signalingStarted,TResult? Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult? Function()?  acceptRequested,TResult? Function()?  rejectRequested,TResult? Function()?  endRequested,TResult? Function()?  muteToggled,TResult? Function()?  cameraToggled,TResult? Function()?  switchCameraRequested,TResult? Function()?  speakerToggled,TResult? Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult? Function( String roomId)?  ringTimedOut,TResult? Function( SignalingMessage message)?  signalingMessageReceived,TResult? Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult? Function( MediaStream stream)?  remoteStreamReceived,TResult? Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult? Function()?  tick,}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
 return signalingStarted();case CallOutgoingRequested() when outgoingCallRequested != null:
@@ -236,7 +241,8 @@ return endRequested();case CallMuteToggled() when muteToggled != null:
 return muteToggled();case CallCameraToggled() when cameraToggled != null:
 return cameraToggled();case CallSwitchCameraRequested() when switchCameraRequested != null:
 return switchCameraRequested();case CallSpeakerToggled() when speakerToggled != null:
-return speakerToggled();case CallRingTimedOut() when ringTimedOut != null:
+return speakerToggled();case CallAudioOutputSelected() when audioOutputSelected != null:
+return audioOutputSelected(_that.deviceId,_that.isSpeaker);case CallRingTimedOut() when ringTimedOut != null:
 return ringTimedOut(_that.roomId);case CallSignalingMessageReceived() when signalingMessageReceived != null:
 return signalingMessageReceived(_that.message);case CallLocalIceCandidateGenerated() when localIceCandidateGenerated != null:
 return localIceCandidateGenerated(_that.candidate);case CallRemoteStreamReceived() when remoteStreamReceived != null:
@@ -573,6 +579,74 @@ String toString() {
 
 
 
+
+/// @nodoc
+
+
+class CallAudioOutputSelected implements CallEvent {
+  const CallAudioOutputSelected({required this.deviceId, required this.isSpeaker});
+  
+
+ final  String deviceId;
+ final  bool isSpeaker;
+
+/// Create a copy of CallEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CallAudioOutputSelectedCopyWith<CallAudioOutputSelected> get copyWith => _$CallAudioOutputSelectedCopyWithImpl<CallAudioOutputSelected>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallAudioOutputSelected&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.isSpeaker, isSpeaker) || other.isSpeaker == isSpeaker));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,deviceId,isSpeaker);
+
+@override
+String toString() {
+  return 'CallEvent.audioOutputSelected(deviceId: $deviceId, isSpeaker: $isSpeaker)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CallAudioOutputSelectedCopyWith<$Res> implements $CallEventCopyWith<$Res> {
+  factory $CallAudioOutputSelectedCopyWith(CallAudioOutputSelected value, $Res Function(CallAudioOutputSelected) _then) = _$CallAudioOutputSelectedCopyWithImpl;
+@useResult
+$Res call({
+ String deviceId, bool isSpeaker
+});
+
+
+
+
+}
+/// @nodoc
+class _$CallAudioOutputSelectedCopyWithImpl<$Res>
+    implements $CallAudioOutputSelectedCopyWith<$Res> {
+  _$CallAudioOutputSelectedCopyWithImpl(this._self, this._then);
+
+  final CallAudioOutputSelected _self;
+  final $Res Function(CallAudioOutputSelected) _then;
+
+/// Create a copy of CallEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? deviceId = null,Object? isSpeaker = null,}) {
+  return _then(CallAudioOutputSelected(
+deviceId: null == deviceId ? _self.deviceId : deviceId // ignore: cast_nullable_to_non_nullable
+as String,isSpeaker: null == isSpeaker ? _self.isSpeaker : isSpeaker // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
 
 /// @nodoc
 
