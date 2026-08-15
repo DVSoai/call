@@ -1,0 +1,8 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# backend Go build output (nếu build binary cục bộ)
+backend/callserver
+backend/callserver.exe

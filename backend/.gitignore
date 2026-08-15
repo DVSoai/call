@@ -1,0 +1,4 @@
+# Chứa private key thật của Firebase Admin SDK — không được commit.
+firebase-service-account.json
+
+.env

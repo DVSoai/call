@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "558470325735",
+    "project_id": "call-video-24443",
+    "storage_bucket": "call-video-24443.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:558470325735:android:dda968a46d2dd2681d4942",
+        "android_client_info": {
+          "package_name": "com.callvideo.call_video_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKvPXg4vdBFk4k7p6sjCXSTHZd7mAzs_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

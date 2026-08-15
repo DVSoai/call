@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: call_video-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: callserver
+      POSTGRES_PASSWORD: callserver
+      POSTGRES_DB: callserver
+    ports:
+      # 5434 (không phải 5432/5433) — tránh xung đột với Postgres mặc định
+      # hoặc với project strongbody-api (đang chiếm 5433) trên cùng máy.
+      - "5434:5432"
+    volumes:
+      - call_video_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U callserver -d callserver"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: call_video-redis
+    restart: unless-stopped
+    ports:
+      # 6380 — tránh xung đột với Redis mặc định (6379) của project khác.
+      - "6380:6379"
+    volumes:
+      - call_video_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  coturn:
+    image: coturn/coturn:latest
+    container_name: call_video-coturn
+    restart: unless-stopped
+    # network_mode: host không hoạt động đúng trên Docker Desktop
+    # (Windows/Mac) — coturn cần publish tường minh cổng control (3478)
+    # + dải cổng relay UDP (mỗi cuộc gọi tốn 1 cổng relay).
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      # 40000-40020 (không phải 49160-49200) — Windows/Hyper-V giữ trước
+      # dải 49152-49251 làm "excluded port range" (kiểm tra bằng
+      # `netsh interface ipv4 show excludedportrange protocol=udp`),
+      # publish port trong dải đó sẽ lỗi "bind: forbidden by access permissions".
+      - "40000-40020:40000-40020/udp"
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+volumes:
+  call_video_pgdata:
+  call_video_redisdata:

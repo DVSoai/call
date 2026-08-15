@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>callserver — test signaling</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; }
+  fieldset { margin-bottom: 16px; }
+  label { display: block; margin: 6px 0 2px; font-size: 13px; color: #333; }
+  input, select { width: 100%; padding: 6px; box-sizing: border-box; }
+  button { margin-top: 8px; padding: 6px 12px; cursor: pointer; }
+  #log { background: #111; color: #0f0; font-family: monospace; font-size: 12px;
+         height: 260px; overflow-y: auto; padding: 8px; white-space: pre-wrap; }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
+  #status { font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>callserver — test 2-tab WebSocket signaling</h2>
+<p>Mở trang này ở 2 tab, login 2 số điện thoại khác nhau, rồi gửi offer/answer qua lại để test routing — không cần Flutter, không cần WebRTC thật.</p>
+
+<fieldset>
+  <legend>1. Cấu hình + Đăng nhập (dev-login)</legend>
+  <label>API base URL</label>
+  <input id="apiBase" value="http://localhost:8080" />
+  <label>Số điện thoại (dùng để dev-login)</label>
+  <input id="phone" value="0900000001" />
+  <button onclick="login()">Login + Connect WS</button>
+  <div>userId: <span id="userId">-</span> | trạng thái WS: <span id="status">chưa kết nối</span></div>
+</fieldset>
+
+<fieldset>
+  <legend>2. Gửi message signaling</legend>
+  <label>type</label>
+  <select id="type">
+    <option value="offer">offer</option>
+    <option value="answer">answer</option>
+    <option value="ice-candidate">ice-candidate</option>
+    <option value="call-end">call-end</option>
+    <option value="call-reject">call-reject</option>
+  </select>
+  <label>to (userId của phía nhận — copy từ tab kia)</label>
+  <input id="to" placeholder="userId phía nhận" />
+  <label>callId (để trống ở offer đầu tiên — Server tự sinh)</label>
+  <input id="callId" placeholder="uuid, điền vào từ message nhận được để trả lời đúng room" />
+  <div class="row">
+    <div>
+      <label>callType (chỉ dùng khi offer)</label>
+      <select id="callType">
+        <option value="audio">audio</option>
+        <option value="video">video</option>
+      </select>
+    </div>
+    <div>
+      <label>sdp (giả lập, không cần SDP thật để test routing)</label>
+      <input id="sdp" value="v=0 (fake sdp for test)" />
+    </div>
+  </div>
+  <button onclick="sendMessage()">Gửi</button>
+</fieldset>
+
+<fieldset>
+  <legend>3. Log</legend>
+  <div id="log"></div>
+</fieldset>
+
+<script>
+let ws = null;
+let token = null;
+let userId = null;
+
+function log(line) {
+  const el = document.getElementById('log');
+  el.textContent += `[${new Date().toLocaleTimeString()}] ${line}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function login() {
+  const apiBase = document.getElementById('apiBase').value;
+  const phone = document.getElementById('phone').value;
+  try {
+    const res = await fetch(`${apiBase}/auth/dev-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    if (!res.ok) throw new Error(`dev-login thất bại: ${res.status}`);
+    const data = await res.json();
+    token = data.token;
+    userId = data.user.id;
+    document.getElementById('userId').textContent = userId;
+    log(`login OK — userId=${userId}`);
+    connectWS(apiBase);
+  } catch (err) {
+    log(`LỖI login: ${err.message}`);
+  }
+}
+
+function connectWS(apiBase) {
+  const wsBase = apiBase.replace(/^http/, 'ws');
+  ws = new WebSocket(`${wsBase}/ws?token=${encodeURIComponent(token)}`);
+
+  ws.onopen = () => {
+    document.getElementById('status').textContent = 'connected';
+    log('WebSocket connected');
+  };
+  ws.onclose = () => {
+    document.getElementById('status').textContent = 'disconnected';
+    log('WebSocket closed');
+  };
+  ws.onerror = (e) => log(`WebSocket error: ${JSON.stringify(e)}`);
+  ws.onmessage = (evt) => {
+    log(`NHẬN <= ${evt.data}`);
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.callId) document.getElementById('callId').value = msg.callId;
+      if (msg.from) document.getElementById('to').value = msg.from; // tiện trả lời ngược lại
+    } catch (_) {}
+  };
+}
+
+function sendMessage() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    log('LỖI: WebSocket chưa kết nối — login trước');
+    return;
+  }
+  const type = document.getElementById('type').value;
+  const to = document.getElementById('to').value;
+  const callId = document.getElementById('callId').value;
+  const callType = document.getElementById('callType').value;
+  const sdp = document.getElementById('sdp').value;
+
+  const message = {
+    type,
+    from: userId, // Server sẽ override bằng danh tính JWT, field này chỉ để đúng schema
+    to,
+    callId,
+    payload: { sdp, callType }
+  };
+  ws.send(JSON.stringify(message));
+  log(`GỬI => ${JSON.stringify(message)}`);
+}
+</script>
+</body>
+</html>
