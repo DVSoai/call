@@ -9,6 +9,8 @@ import '../../../../core/bloc/abstract_bloc_with_api.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../translation/data/services/model_download_service.dart';
+import '../../../translation/data/services/translation_pipeline.dart';
 import '../../data/services/webrtc_service.dart';
 import '../../domain/entities/ice_server.dart';
 import '../../domain/entities/signaling_message.dart';
@@ -37,11 +39,13 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     required CreateGroupCallUseCase createGroupCallUseCase,
     required JoinGroupCallUseCase joinGroupCallUseCase,
     required TokenStorage tokenStorage,
+    required ModelDownloadService modelDownloadService,
   })  : _repository = repository,
         _getTurnCredentialsUseCase = getTurnCredentialsUseCase,
         _createGroupCallUseCase = createGroupCallUseCase,
         _joinGroupCallUseCase = joinGroupCallUseCase,
         _tokenStorage = tokenStorage,
+        _modelDownloadService = modelDownloadService,
         super(const CallState()) {
     on<CallSignalingStarted>(_onSignalingStarted);
     on<CallOutgoingRequested>(_onOutgoingCallRequested);
@@ -62,6 +66,8 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
         (event, emit) => emit(state.copyWith(remoteStreamTick: state.remoteStreamTick + 1)));
     on<CallPeerConnectionStateChanged>(_onPeerConnectionStateChanged);
     on<CallTicked>((event, emit) => emit(state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1))));
+    on<CallSubtitlesToggled>(_onSubtitlesToggled);
+    on<CallSubtitleUpdated>((event, emit) => emit(state.copyWith(subtitleText: event.text)));
   }
 
   // Khớp ringingTTL (30s) phía backend — Zalo/Messenger đều tự huỷ cuộc gọi
@@ -73,6 +79,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   final CreateGroupCallUseCase _createGroupCallUseCase;
   final JoinGroupCallUseCase _joinGroupCallUseCase;
   final TokenStorage _tokenStorage;
+  final ModelDownloadService _modelDownloadService;
   final _uuid = const Uuid();
 
   WebRtcService? _webRtcService;
@@ -83,6 +90,10 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   StreamSubscription<RTCPeerConnectionState>? _connectionStateSub;
   Timer? _ticker;
   Timer? _ringTimer;
+
+  TranslationPipeline? _translationPipeline;
+  StreamSubscription<String>? _remoteAudioSegmentSub;
+  StreamSubscription<String>? _subtitleSub;
 
   // roomId user đã bấm Accept trên màn hình cuộc gọi đến kiểu native
   // (CallKit/ConnectionService, xem core/push/push_service.dart) TRƯỚC KHI
@@ -327,6 +338,9 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       callMode: 'direct',
       participantIds: const [],
       elapsed: Duration.zero,
+      subtitlesEnabled: false,
+      subtitleText: null,
+      peerPreferredLanguage: null,
     ));
   }
 
@@ -364,6 +378,68 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   Future<void> _onAudioOutputSelected(CallAudioOutputSelected event, Emitter<CallState> emit) async {
     await _webRtcService?.selectAudioOutput(event.deviceId);
     emit(state.copyWith(isSpeakerOn: event.isSpeaker));
+  }
+
+  /// Bật/tắt phụ đề dịch (Translated Call, §8) — v1 chỉ call 1-1 đã
+  /// connected, cần biết ngôn ngữ người kia (peerPreferredLanguage, Server tự
+  /// điền vào offer/answer) mới ép cứng được ASR đúng hướng. Tải model lần
+  /// đầu diễn ra NGẦM (không hiện dialog/dung lượng) — subtitleText đơn giản
+  /// vẫn null cho tới khi pipeline sẵn sàng, không cần trạng thái loading
+  /// riêng.
+  Future<void> _onSubtitlesToggled(CallSubtitlesToggled event, Emitter<CallState> emit) async {
+    if (state.subtitlesEnabled) {
+      await _stopTranslation();
+      emit(state.copyWith(subtitlesEnabled: false, subtitleText: null));
+      return;
+    }
+
+    if (state.callMode != 'direct' || state.status != CallStatus.connected) return;
+    final peerLanguage = state.peerPreferredLanguage;
+    if (peerLanguage == null) {
+      AppLogger.w('CallBloc: bật phụ đề nhưng chưa biết ngôn ngữ người kia');
+      return;
+    }
+    final myLanguage = (await _tokenStorage.readUserProfile())?['preferredLanguage'] ?? 'vi';
+    if (peerLanguage == myLanguage) {
+      // Cùng ngôn ngữ — dịch ra chính nó vô nghĩa, không có gì để bật.
+      return;
+    }
+
+    emit(state.copyWith(subtitlesEnabled: true));
+    try {
+      await _startTranslation(sourceLanguage: peerLanguage, targetLanguage: myLanguage);
+    } catch (e, st) {
+      AppLogger.e('CallBloc: bật phụ đề lỗi', e, st);
+      await _stopTranslation();
+      emit(state.copyWith(subtitlesEnabled: false));
+    }
+  }
+
+  Future<void> _startTranslation({required String sourceLanguage, required String targetLanguage}) async {
+    final service = _webRtcService;
+    if (service == null) return;
+
+    final config = await _modelDownloadService.ensurePipelineConfig(
+      sourceLanguage: sourceLanguage,
+      targetLanguage: targetLanguage,
+    );
+
+    final pipeline = TranslationPipeline();
+    _translationPipeline = pipeline;
+    await pipeline.start(config);
+    _subtitleSub = pipeline.onSubtitle.listen((text) => add(CallEvent.subtitleUpdated(text)));
+    _remoteAudioSegmentSub = service.onRemoteAudioSegment.listen(pipeline.feedAudioSegment);
+    await service.startRemoteAudioCapture();
+  }
+
+  Future<void> _stopTranslation() async {
+    await _remoteAudioSegmentSub?.cancel();
+    _remoteAudioSegmentSub = null;
+    await _subtitleSub?.cancel();
+    _subtitleSub = null;
+    await _webRtcService?.stopRemoteAudioCapture();
+    await _translationPipeline?.dispose();
+    _translationPipeline = null;
   }
 
   /// 30s không ai bắt máy — tự huỷ giống Zalo/Messenger thay vì đổ chuông
@@ -440,6 +516,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       peerId: msg.from,
       callType: msg.callType ?? 'audio',
       pendingRemoteOfferSdp: msg.sdp,
+      peerPreferredLanguage: msg.preferredLanguage,
     ));
     _startRingTimer(msg.callId);
 
@@ -503,7 +580,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   Future<void> _handleAnswer(SignalingMessage msg, Emitter<CallState> emit) async {
     if (msg.callId != state.roomId || _webRtcService == null || msg.sdp == null) return;
     _cancelRingTimer();
-    emit(state.copyWith(status: CallStatus.connecting));
+    emit(state.copyWith(status: CallStatus.connecting, peerPreferredLanguage: msg.preferredLanguage));
     try {
       await _webRtcService!.applyRemoteAnswer(msg.sdp!);
     } catch (e, st) {
@@ -643,6 +720,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   Future<void> _cleanupWebRtc() async {
     _ticker?.cancel();
     _ticker = null;
+    await _stopTranslation();
     await _localIceSub?.cancel();
     await _remoteStreamSub?.cancel();
     await _groupRemoteStreamsSub?.cancel();

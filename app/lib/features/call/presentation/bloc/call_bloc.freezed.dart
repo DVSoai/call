@@ -56,7 +56,7 @@ extension CallEventPatterns on CallEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CallSignalingStarted value)?  signalingStarted,TResult Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult Function( CallGroupRequested value)?  groupCallRequested,TResult Function( CallAcceptRequested value)?  acceptRequested,TResult Function( CallRejectRequested value)?  rejectRequested,TResult Function( CallEndRequested value)?  endRequested,TResult Function( CallMuteToggled value)?  muteToggled,TResult Function( CallCameraToggled value)?  cameraToggled,TResult Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult Function( CallSpeakerToggled value)?  speakerToggled,TResult Function( CallAudioOutputSelected value)?  audioOutputSelected,TResult Function( CallRingTimedOut value)?  ringTimedOut,TResult Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult Function( CallGroupRemoteStreamsChanged value)?  groupRemoteStreamsChanged,TResult Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult Function( CallTicked value)?  tick,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CallSignalingStarted value)?  signalingStarted,TResult Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult Function( CallGroupRequested value)?  groupCallRequested,TResult Function( CallAcceptRequested value)?  acceptRequested,TResult Function( CallRejectRequested value)?  rejectRequested,TResult Function( CallEndRequested value)?  endRequested,TResult Function( CallMuteToggled value)?  muteToggled,TResult Function( CallCameraToggled value)?  cameraToggled,TResult Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult Function( CallSpeakerToggled value)?  speakerToggled,TResult Function( CallAudioOutputSelected value)?  audioOutputSelected,TResult Function( CallRingTimedOut value)?  ringTimedOut,TResult Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult Function( CallGroupRemoteStreamsChanged value)?  groupRemoteStreamsChanged,TResult Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult Function( CallTicked value)?  tick,TResult Function( CallSubtitlesToggled value)?  subtitlesToggled,TResult Function( CallSubtitleUpdated value)?  subtitleUpdated,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
@@ -77,7 +77,9 @@ return localIceCandidateGenerated(_that);case CallRemoteStreamReceived() when re
 return remoteStreamReceived(_that);case CallGroupRemoteStreamsChanged() when groupRemoteStreamsChanged != null:
 return groupRemoteStreamsChanged(_that);case CallPeerConnectionStateChanged() when peerConnectionStateChanged != null:
 return peerConnectionStateChanged(_that);case CallTicked() when tick != null:
-return tick(_that);case _:
+return tick(_that);case CallSubtitlesToggled() when subtitlesToggled != null:
+return subtitlesToggled(_that);case CallSubtitleUpdated() when subtitleUpdated != null:
+return subtitleUpdated(_that);case _:
   return orElse();
 
 }
@@ -95,7 +97,7 @@ return tick(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CallSignalingStarted value)  signalingStarted,required TResult Function( CallOutgoingRequested value)  outgoingCallRequested,required TResult Function( CallGroupRequested value)  groupCallRequested,required TResult Function( CallAcceptRequested value)  acceptRequested,required TResult Function( CallRejectRequested value)  rejectRequested,required TResult Function( CallEndRequested value)  endRequested,required TResult Function( CallMuteToggled value)  muteToggled,required TResult Function( CallCameraToggled value)  cameraToggled,required TResult Function( CallSwitchCameraRequested value)  switchCameraRequested,required TResult Function( CallSpeakerToggled value)  speakerToggled,required TResult Function( CallAudioOutputSelected value)  audioOutputSelected,required TResult Function( CallRingTimedOut value)  ringTimedOut,required TResult Function( CallSignalingMessageReceived value)  signalingMessageReceived,required TResult Function( CallLocalIceCandidateGenerated value)  localIceCandidateGenerated,required TResult Function( CallRemoteStreamReceived value)  remoteStreamReceived,required TResult Function( CallGroupRemoteStreamsChanged value)  groupRemoteStreamsChanged,required TResult Function( CallPeerConnectionStateChanged value)  peerConnectionStateChanged,required TResult Function( CallTicked value)  tick,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CallSignalingStarted value)  signalingStarted,required TResult Function( CallOutgoingRequested value)  outgoingCallRequested,required TResult Function( CallGroupRequested value)  groupCallRequested,required TResult Function( CallAcceptRequested value)  acceptRequested,required TResult Function( CallRejectRequested value)  rejectRequested,required TResult Function( CallEndRequested value)  endRequested,required TResult Function( CallMuteToggled value)  muteToggled,required TResult Function( CallCameraToggled value)  cameraToggled,required TResult Function( CallSwitchCameraRequested value)  switchCameraRequested,required TResult Function( CallSpeakerToggled value)  speakerToggled,required TResult Function( CallAudioOutputSelected value)  audioOutputSelected,required TResult Function( CallRingTimedOut value)  ringTimedOut,required TResult Function( CallSignalingMessageReceived value)  signalingMessageReceived,required TResult Function( CallLocalIceCandidateGenerated value)  localIceCandidateGenerated,required TResult Function( CallRemoteStreamReceived value)  remoteStreamReceived,required TResult Function( CallGroupRemoteStreamsChanged value)  groupRemoteStreamsChanged,required TResult Function( CallPeerConnectionStateChanged value)  peerConnectionStateChanged,required TResult Function( CallTicked value)  tick,required TResult Function( CallSubtitlesToggled value)  subtitlesToggled,required TResult Function( CallSubtitleUpdated value)  subtitleUpdated,}){
 final _that = this;
 switch (_that) {
 case CallSignalingStarted():
@@ -116,7 +118,9 @@ return localIceCandidateGenerated(_that);case CallRemoteStreamReceived():
 return remoteStreamReceived(_that);case CallGroupRemoteStreamsChanged():
 return groupRemoteStreamsChanged(_that);case CallPeerConnectionStateChanged():
 return peerConnectionStateChanged(_that);case CallTicked():
-return tick(_that);}
+return tick(_that);case CallSubtitlesToggled():
+return subtitlesToggled(_that);case CallSubtitleUpdated():
+return subtitleUpdated(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -130,7 +134,7 @@ return tick(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CallSignalingStarted value)?  signalingStarted,TResult? Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult? Function( CallGroupRequested value)?  groupCallRequested,TResult? Function( CallAcceptRequested value)?  acceptRequested,TResult? Function( CallRejectRequested value)?  rejectRequested,TResult? Function( CallEndRequested value)?  endRequested,TResult? Function( CallMuteToggled value)?  muteToggled,TResult? Function( CallCameraToggled value)?  cameraToggled,TResult? Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult? Function( CallSpeakerToggled value)?  speakerToggled,TResult? Function( CallAudioOutputSelected value)?  audioOutputSelected,TResult? Function( CallRingTimedOut value)?  ringTimedOut,TResult? Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult? Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult? Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult? Function( CallGroupRemoteStreamsChanged value)?  groupRemoteStreamsChanged,TResult? Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult? Function( CallTicked value)?  tick,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CallSignalingStarted value)?  signalingStarted,TResult? Function( CallOutgoingRequested value)?  outgoingCallRequested,TResult? Function( CallGroupRequested value)?  groupCallRequested,TResult? Function( CallAcceptRequested value)?  acceptRequested,TResult? Function( CallRejectRequested value)?  rejectRequested,TResult? Function( CallEndRequested value)?  endRequested,TResult? Function( CallMuteToggled value)?  muteToggled,TResult? Function( CallCameraToggled value)?  cameraToggled,TResult? Function( CallSwitchCameraRequested value)?  switchCameraRequested,TResult? Function( CallSpeakerToggled value)?  speakerToggled,TResult? Function( CallAudioOutputSelected value)?  audioOutputSelected,TResult? Function( CallRingTimedOut value)?  ringTimedOut,TResult? Function( CallSignalingMessageReceived value)?  signalingMessageReceived,TResult? Function( CallLocalIceCandidateGenerated value)?  localIceCandidateGenerated,TResult? Function( CallRemoteStreamReceived value)?  remoteStreamReceived,TResult? Function( CallGroupRemoteStreamsChanged value)?  groupRemoteStreamsChanged,TResult? Function( CallPeerConnectionStateChanged value)?  peerConnectionStateChanged,TResult? Function( CallTicked value)?  tick,TResult? Function( CallSubtitlesToggled value)?  subtitlesToggled,TResult? Function( CallSubtitleUpdated value)?  subtitleUpdated,}){
 final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
@@ -151,7 +155,9 @@ return localIceCandidateGenerated(_that);case CallRemoteStreamReceived() when re
 return remoteStreamReceived(_that);case CallGroupRemoteStreamsChanged() when groupRemoteStreamsChanged != null:
 return groupRemoteStreamsChanged(_that);case CallPeerConnectionStateChanged() when peerConnectionStateChanged != null:
 return peerConnectionStateChanged(_that);case CallTicked() when tick != null:
-return tick(_that);case _:
+return tick(_that);case CallSubtitlesToggled() when subtitlesToggled != null:
+return subtitlesToggled(_that);case CallSubtitleUpdated() when subtitleUpdated != null:
+return subtitleUpdated(_that);case _:
   return null;
 
 }
@@ -168,7 +174,7 @@ return tick(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  signalingStarted,TResult Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult Function( List<String> participantIds,  String? conversationId,  bool isVideo)?  groupCallRequested,TResult Function()?  acceptRequested,TResult Function()?  rejectRequested,TResult Function()?  endRequested,TResult Function()?  muteToggled,TResult Function()?  cameraToggled,TResult Function()?  switchCameraRequested,TResult Function()?  speakerToggled,TResult Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult Function( String roomId)?  ringTimedOut,TResult Function( SignalingMessage message)?  signalingMessageReceived,TResult Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult Function( MediaStream stream)?  remoteStreamReceived,TResult Function()?  groupRemoteStreamsChanged,TResult Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult Function()?  tick,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  signalingStarted,TResult Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult Function( List<String> participantIds,  String? conversationId,  bool isVideo)?  groupCallRequested,TResult Function()?  acceptRequested,TResult Function()?  rejectRequested,TResult Function()?  endRequested,TResult Function()?  muteToggled,TResult Function()?  cameraToggled,TResult Function()?  switchCameraRequested,TResult Function()?  speakerToggled,TResult Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult Function( String roomId)?  ringTimedOut,TResult Function( SignalingMessage message)?  signalingMessageReceived,TResult Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult Function( MediaStream stream)?  remoteStreamReceived,TResult Function()?  groupRemoteStreamsChanged,TResult Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult Function()?  tick,TResult Function()?  subtitlesToggled,TResult Function( String text)?  subtitleUpdated,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
 return signalingStarted();case CallOutgoingRequested() when outgoingCallRequested != null:
@@ -188,7 +194,9 @@ return localIceCandidateGenerated(_that.candidate);case CallRemoteStreamReceived
 return remoteStreamReceived(_that.stream);case CallGroupRemoteStreamsChanged() when groupRemoteStreamsChanged != null:
 return groupRemoteStreamsChanged();case CallPeerConnectionStateChanged() when peerConnectionStateChanged != null:
 return peerConnectionStateChanged(_that.state);case CallTicked() when tick != null:
-return tick();case _:
+return tick();case CallSubtitlesToggled() when subtitlesToggled != null:
+return subtitlesToggled();case CallSubtitleUpdated() when subtitleUpdated != null:
+return subtitleUpdated(_that.text);case _:
   return orElse();
 
 }
@@ -206,7 +214,7 @@ return tick();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  signalingStarted,required TResult Function( String calleeId,  bool isVideo)  outgoingCallRequested,required TResult Function( List<String> participantIds,  String? conversationId,  bool isVideo)  groupCallRequested,required TResult Function()  acceptRequested,required TResult Function()  rejectRequested,required TResult Function()  endRequested,required TResult Function()  muteToggled,required TResult Function()  cameraToggled,required TResult Function()  switchCameraRequested,required TResult Function()  speakerToggled,required TResult Function( String deviceId,  bool isSpeaker)  audioOutputSelected,required TResult Function( String roomId)  ringTimedOut,required TResult Function( SignalingMessage message)  signalingMessageReceived,required TResult Function( RTCIceCandidate candidate)  localIceCandidateGenerated,required TResult Function( MediaStream stream)  remoteStreamReceived,required TResult Function()  groupRemoteStreamsChanged,required TResult Function( RTCPeerConnectionState state)  peerConnectionStateChanged,required TResult Function()  tick,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  signalingStarted,required TResult Function( String calleeId,  bool isVideo)  outgoingCallRequested,required TResult Function( List<String> participantIds,  String? conversationId,  bool isVideo)  groupCallRequested,required TResult Function()  acceptRequested,required TResult Function()  rejectRequested,required TResult Function()  endRequested,required TResult Function()  muteToggled,required TResult Function()  cameraToggled,required TResult Function()  switchCameraRequested,required TResult Function()  speakerToggled,required TResult Function( String deviceId,  bool isSpeaker)  audioOutputSelected,required TResult Function( String roomId)  ringTimedOut,required TResult Function( SignalingMessage message)  signalingMessageReceived,required TResult Function( RTCIceCandidate candidate)  localIceCandidateGenerated,required TResult Function( MediaStream stream)  remoteStreamReceived,required TResult Function()  groupRemoteStreamsChanged,required TResult Function( RTCPeerConnectionState state)  peerConnectionStateChanged,required TResult Function()  tick,required TResult Function()  subtitlesToggled,required TResult Function( String text)  subtitleUpdated,}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted():
 return signalingStarted();case CallOutgoingRequested():
@@ -226,7 +234,9 @@ return localIceCandidateGenerated(_that.candidate);case CallRemoteStreamReceived
 return remoteStreamReceived(_that.stream);case CallGroupRemoteStreamsChanged():
 return groupRemoteStreamsChanged();case CallPeerConnectionStateChanged():
 return peerConnectionStateChanged(_that.state);case CallTicked():
-return tick();}
+return tick();case CallSubtitlesToggled():
+return subtitlesToggled();case CallSubtitleUpdated():
+return subtitleUpdated(_that.text);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -240,7 +250,7 @@ return tick();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  signalingStarted,TResult? Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult? Function( List<String> participantIds,  String? conversationId,  bool isVideo)?  groupCallRequested,TResult? Function()?  acceptRequested,TResult? Function()?  rejectRequested,TResult? Function()?  endRequested,TResult? Function()?  muteToggled,TResult? Function()?  cameraToggled,TResult? Function()?  switchCameraRequested,TResult? Function()?  speakerToggled,TResult? Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult? Function( String roomId)?  ringTimedOut,TResult? Function( SignalingMessage message)?  signalingMessageReceived,TResult? Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult? Function( MediaStream stream)?  remoteStreamReceived,TResult? Function()?  groupRemoteStreamsChanged,TResult? Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult? Function()?  tick,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  signalingStarted,TResult? Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult? Function( List<String> participantIds,  String? conversationId,  bool isVideo)?  groupCallRequested,TResult? Function()?  acceptRequested,TResult? Function()?  rejectRequested,TResult? Function()?  endRequested,TResult? Function()?  muteToggled,TResult? Function()?  cameraToggled,TResult? Function()?  switchCameraRequested,TResult? Function()?  speakerToggled,TResult? Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult? Function( String roomId)?  ringTimedOut,TResult? Function( SignalingMessage message)?  signalingMessageReceived,TResult? Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult? Function( MediaStream stream)?  remoteStreamReceived,TResult? Function()?  groupRemoteStreamsChanged,TResult? Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult? Function()?  tick,TResult? Function()?  subtitlesToggled,TResult? Function( String text)?  subtitleUpdated,}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
 return signalingStarted();case CallOutgoingRequested() when outgoingCallRequested != null:
@@ -260,7 +270,9 @@ return localIceCandidateGenerated(_that.candidate);case CallRemoteStreamReceived
 return remoteStreamReceived(_that.stream);case CallGroupRemoteStreamsChanged() when groupRemoteStreamsChanged != null:
 return groupRemoteStreamsChanged();case CallPeerConnectionStateChanged() when peerConnectionStateChanged != null:
 return peerConnectionStateChanged(_that.state);case CallTicked() when tick != null:
-return tick();case _:
+return tick();case CallSubtitlesToggled() when subtitlesToggled != null:
+return subtitlesToggled();case CallSubtitleUpdated() when subtitleUpdated != null:
+return subtitleUpdated(_that.text);case _:
   return null;
 
 }
@@ -1131,6 +1143,104 @@ String toString() {
 
 
 /// @nodoc
+
+
+class CallSubtitlesToggled implements CallEvent {
+  const CallSubtitlesToggled();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallSubtitlesToggled);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'CallEvent.subtitlesToggled()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class CallSubtitleUpdated implements CallEvent {
+  const CallSubtitleUpdated(this.text);
+  
+
+ final  String text;
+
+/// Create a copy of CallEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CallSubtitleUpdatedCopyWith<CallSubtitleUpdated> get copyWith => _$CallSubtitleUpdatedCopyWithImpl<CallSubtitleUpdated>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallSubtitleUpdated&&(identical(other.text, text) || other.text == text));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,text);
+
+@override
+String toString() {
+  return 'CallEvent.subtitleUpdated(text: $text)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CallSubtitleUpdatedCopyWith<$Res> implements $CallEventCopyWith<$Res> {
+  factory $CallSubtitleUpdatedCopyWith(CallSubtitleUpdated value, $Res Function(CallSubtitleUpdated) _then) = _$CallSubtitleUpdatedCopyWithImpl;
+@useResult
+$Res call({
+ String text
+});
+
+
+
+
+}
+/// @nodoc
+class _$CallSubtitleUpdatedCopyWithImpl<$Res>
+    implements $CallSubtitleUpdatedCopyWith<$Res> {
+  _$CallSubtitleUpdatedCopyWithImpl(this._self, this._then);
+
+  final CallSubtitleUpdated _self;
+  final $Res Function(CallSubtitleUpdated) _then;
+
+/// Create a copy of CallEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? text = null,}) {
+  return _then(CallSubtitleUpdated(
+null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$CallState {
 
  CallStatus get status; String? get roomId; String? get peerId; String get callType; bool get isMuted; bool get isCameraOff; bool get isSpeakerOn; String get callMode; List<String> get participantIds; bool get isSignalingConnected; String? get errorMessage; Duration get elapsed;/// SDP offer nhận được (chưa xử lý tới khi user bấm Accept) — không
@@ -1140,7 +1250,14 @@ mixin _$CallState {
  String? get pendingRemoteOfferSdp;/// Tăng dần mỗi khi remote MediaStream mới sẵn sàng — UI dùng làm tín
 /// hiệu để đọc lại CallBloc.remoteStream và gán vào RTCVideoRenderer,
 /// vì bản thân MediaStream không nằm trong state (xem ghi chú trên).
- int get remoteStreamTick;
+ int get remoteStreamTick;/// Translated Call (docs/CALL_SYSTEM.md §8) — user tự bật, chỉ áp dụng
+/// cho call 1-1 đã connected (v1). subtitleText là dòng dịch MỚI NHẤT,
+/// null nếu tắt phụ đề hoặc chưa có câu nào được dịch xong.
+ bool get subtitlesEnabled; String? get subtitleText;/// Ngôn ngữ NGƯỜI KIA đang nói — Server tự điền vào offer/answer (xem
+/// SignalingMessage.preferredLanguage), dùng để ép cứng ASR thay vì để
+/// Whisper tự đoán. null nếu chưa nhận được offer/answer nào có field
+/// này (vd. đang outgoingRinging, chưa có answer).
+ String? get peerPreferredLanguage;
 /// Create a copy of CallState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1151,16 +1268,16 @@ $CallStateCopyWith<CallState> get copyWith => _$CallStateCopyWithImpl<CallState>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallState&&(identical(other.status, status) || other.status == status)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.peerId, peerId) || other.peerId == peerId)&&(identical(other.callType, callType) || other.callType == callType)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isCameraOff, isCameraOff) || other.isCameraOff == isCameraOff)&&(identical(other.isSpeakerOn, isSpeakerOn) || other.isSpeakerOn == isSpeakerOn)&&(identical(other.callMode, callMode) || other.callMode == callMode)&&const DeepCollectionEquality().equals(other.participantIds, participantIds)&&(identical(other.isSignalingConnected, isSignalingConnected) || other.isSignalingConnected == isSignalingConnected)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.elapsed, elapsed) || other.elapsed == elapsed)&&(identical(other.pendingRemoteOfferSdp, pendingRemoteOfferSdp) || other.pendingRemoteOfferSdp == pendingRemoteOfferSdp)&&(identical(other.remoteStreamTick, remoteStreamTick) || other.remoteStreamTick == remoteStreamTick));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallState&&(identical(other.status, status) || other.status == status)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.peerId, peerId) || other.peerId == peerId)&&(identical(other.callType, callType) || other.callType == callType)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isCameraOff, isCameraOff) || other.isCameraOff == isCameraOff)&&(identical(other.isSpeakerOn, isSpeakerOn) || other.isSpeakerOn == isSpeakerOn)&&(identical(other.callMode, callMode) || other.callMode == callMode)&&const DeepCollectionEquality().equals(other.participantIds, participantIds)&&(identical(other.isSignalingConnected, isSignalingConnected) || other.isSignalingConnected == isSignalingConnected)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.elapsed, elapsed) || other.elapsed == elapsed)&&(identical(other.pendingRemoteOfferSdp, pendingRemoteOfferSdp) || other.pendingRemoteOfferSdp == pendingRemoteOfferSdp)&&(identical(other.remoteStreamTick, remoteStreamTick) || other.remoteStreamTick == remoteStreamTick)&&(identical(other.subtitlesEnabled, subtitlesEnabled) || other.subtitlesEnabled == subtitlesEnabled)&&(identical(other.subtitleText, subtitleText) || other.subtitleText == subtitleText)&&(identical(other.peerPreferredLanguage, peerPreferredLanguage) || other.peerPreferredLanguage == peerPreferredLanguage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,roomId,peerId,callType,isMuted,isCameraOff,isSpeakerOn,callMode,const DeepCollectionEquality().hash(participantIds),isSignalingConnected,errorMessage,elapsed,pendingRemoteOfferSdp,remoteStreamTick);
+int get hashCode => Object.hash(runtimeType,status,roomId,peerId,callType,isMuted,isCameraOff,isSpeakerOn,callMode,const DeepCollectionEquality().hash(participantIds),isSignalingConnected,errorMessage,elapsed,pendingRemoteOfferSdp,remoteStreamTick,subtitlesEnabled,subtitleText,peerPreferredLanguage);
 
 @override
 String toString() {
-  return 'CallState(status: $status, roomId: $roomId, peerId: $peerId, callType: $callType, isMuted: $isMuted, isCameraOff: $isCameraOff, isSpeakerOn: $isSpeakerOn, callMode: $callMode, participantIds: $participantIds, isSignalingConnected: $isSignalingConnected, errorMessage: $errorMessage, elapsed: $elapsed, pendingRemoteOfferSdp: $pendingRemoteOfferSdp, remoteStreamTick: $remoteStreamTick)';
+  return 'CallState(status: $status, roomId: $roomId, peerId: $peerId, callType: $callType, isMuted: $isMuted, isCameraOff: $isCameraOff, isSpeakerOn: $isSpeakerOn, callMode: $callMode, participantIds: $participantIds, isSignalingConnected: $isSignalingConnected, errorMessage: $errorMessage, elapsed: $elapsed, pendingRemoteOfferSdp: $pendingRemoteOfferSdp, remoteStreamTick: $remoteStreamTick, subtitlesEnabled: $subtitlesEnabled, subtitleText: $subtitleText, peerPreferredLanguage: $peerPreferredLanguage)';
 }
 
 
@@ -1171,7 +1288,7 @@ abstract mixin class $CallStateCopyWith<$Res>  {
   factory $CallStateCopyWith(CallState value, $Res Function(CallState) _then) = _$CallStateCopyWithImpl;
 @useResult
 $Res call({
- CallStatus status, String? roomId, String? peerId, String callType, bool isMuted, bool isCameraOff, bool isSpeakerOn, String callMode, List<String> participantIds, bool isSignalingConnected, String? errorMessage, Duration elapsed, String? pendingRemoteOfferSdp, int remoteStreamTick
+ CallStatus status, String? roomId, String? peerId, String callType, bool isMuted, bool isCameraOff, bool isSpeakerOn, String callMode, List<String> participantIds, bool isSignalingConnected, String? errorMessage, Duration elapsed, String? pendingRemoteOfferSdp, int remoteStreamTick, bool subtitlesEnabled, String? subtitleText, String? peerPreferredLanguage
 });
 
 
@@ -1188,7 +1305,7 @@ class _$CallStateCopyWithImpl<$Res>
 
 /// Create a copy of CallState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? roomId = freezed,Object? peerId = freezed,Object? callType = null,Object? isMuted = null,Object? isCameraOff = null,Object? isSpeakerOn = null,Object? callMode = null,Object? participantIds = null,Object? isSignalingConnected = null,Object? errorMessage = freezed,Object? elapsed = null,Object? pendingRemoteOfferSdp = freezed,Object? remoteStreamTick = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? roomId = freezed,Object? peerId = freezed,Object? callType = null,Object? isMuted = null,Object? isCameraOff = null,Object? isSpeakerOn = null,Object? callMode = null,Object? participantIds = null,Object? isSignalingConnected = null,Object? errorMessage = freezed,Object? elapsed = null,Object? pendingRemoteOfferSdp = freezed,Object? remoteStreamTick = null,Object? subtitlesEnabled = null,Object? subtitleText = freezed,Object? peerPreferredLanguage = freezed,}) {
   return _then(CallState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as CallStatus,roomId: freezed == roomId ? _self.roomId : roomId // ignore: cast_nullable_to_non_nullable
@@ -1204,7 +1321,10 @@ as bool,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessag
 as String?,elapsed: null == elapsed ? _self.elapsed : elapsed // ignore: cast_nullable_to_non_nullable
 as Duration,pendingRemoteOfferSdp: freezed == pendingRemoteOfferSdp ? _self.pendingRemoteOfferSdp : pendingRemoteOfferSdp // ignore: cast_nullable_to_non_nullable
 as String?,remoteStreamTick: null == remoteStreamTick ? _self.remoteStreamTick : remoteStreamTick // ignore: cast_nullable_to_non_nullable
-as int,
+as int,subtitlesEnabled: null == subtitlesEnabled ? _self.subtitlesEnabled : subtitlesEnabled // ignore: cast_nullable_to_non_nullable
+as bool,subtitleText: freezed == subtitleText ? _self.subtitleText : subtitleText // ignore: cast_nullable_to_non_nullable
+as String?,peerPreferredLanguage: freezed == peerPreferredLanguage ? _self.peerPreferredLanguage : peerPreferredLanguage // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -1286,10 +1406,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CallStatus status,  String? roomId,  String? peerId,  String callType,  bool isMuted,  bool isCameraOff,  bool isSpeakerOn,  String callMode,  List<String> participantIds,  bool isSignalingConnected,  String? errorMessage,  Duration elapsed,  String? pendingRemoteOfferSdp,  int remoteStreamTick)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CallStatus status,  String? roomId,  String? peerId,  String callType,  bool isMuted,  bool isCameraOff,  bool isSpeakerOn,  String callMode,  List<String> participantIds,  bool isSignalingConnected,  String? errorMessage,  Duration elapsed,  String? pendingRemoteOfferSdp,  int remoteStreamTick,  bool subtitlesEnabled,  String? subtitleText,  String? peerPreferredLanguage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CallState() when $default != null:
-return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMuted,_that.isCameraOff,_that.isSpeakerOn,_that.callMode,_that.participantIds,_that.isSignalingConnected,_that.errorMessage,_that.elapsed,_that.pendingRemoteOfferSdp,_that.remoteStreamTick);case _:
+return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMuted,_that.isCameraOff,_that.isSpeakerOn,_that.callMode,_that.participantIds,_that.isSignalingConnected,_that.errorMessage,_that.elapsed,_that.pendingRemoteOfferSdp,_that.remoteStreamTick,_that.subtitlesEnabled,_that.subtitleText,_that.peerPreferredLanguage);case _:
   return orElse();
 
 }
@@ -1307,10 +1427,10 @@ return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMu
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CallStatus status,  String? roomId,  String? peerId,  String callType,  bool isMuted,  bool isCameraOff,  bool isSpeakerOn,  String callMode,  List<String> participantIds,  bool isSignalingConnected,  String? errorMessage,  Duration elapsed,  String? pendingRemoteOfferSdp,  int remoteStreamTick)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CallStatus status,  String? roomId,  String? peerId,  String callType,  bool isMuted,  bool isCameraOff,  bool isSpeakerOn,  String callMode,  List<String> participantIds,  bool isSignalingConnected,  String? errorMessage,  Duration elapsed,  String? pendingRemoteOfferSdp,  int remoteStreamTick,  bool subtitlesEnabled,  String? subtitleText,  String? peerPreferredLanguage)  $default,) {final _that = this;
 switch (_that) {
 case _CallState():
-return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMuted,_that.isCameraOff,_that.isSpeakerOn,_that.callMode,_that.participantIds,_that.isSignalingConnected,_that.errorMessage,_that.elapsed,_that.pendingRemoteOfferSdp,_that.remoteStreamTick);}
+return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMuted,_that.isCameraOff,_that.isSpeakerOn,_that.callMode,_that.participantIds,_that.isSignalingConnected,_that.errorMessage,_that.elapsed,_that.pendingRemoteOfferSdp,_that.remoteStreamTick,_that.subtitlesEnabled,_that.subtitleText,_that.peerPreferredLanguage);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -1324,10 +1444,10 @@ return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMu
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CallStatus status,  String? roomId,  String? peerId,  String callType,  bool isMuted,  bool isCameraOff,  bool isSpeakerOn,  String callMode,  List<String> participantIds,  bool isSignalingConnected,  String? errorMessage,  Duration elapsed,  String? pendingRemoteOfferSdp,  int remoteStreamTick)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CallStatus status,  String? roomId,  String? peerId,  String callType,  bool isMuted,  bool isCameraOff,  bool isSpeakerOn,  String callMode,  List<String> participantIds,  bool isSignalingConnected,  String? errorMessage,  Duration elapsed,  String? pendingRemoteOfferSdp,  int remoteStreamTick,  bool subtitlesEnabled,  String? subtitleText,  String? peerPreferredLanguage)?  $default,) {final _that = this;
 switch (_that) {
 case _CallState() when $default != null:
-return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMuted,_that.isCameraOff,_that.isSpeakerOn,_that.callMode,_that.participantIds,_that.isSignalingConnected,_that.errorMessage,_that.elapsed,_that.pendingRemoteOfferSdp,_that.remoteStreamTick);case _:
+return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMuted,_that.isCameraOff,_that.isSpeakerOn,_that.callMode,_that.participantIds,_that.isSignalingConnected,_that.errorMessage,_that.elapsed,_that.pendingRemoteOfferSdp,_that.remoteStreamTick,_that.subtitlesEnabled,_that.subtitleText,_that.peerPreferredLanguage);case _:
   return null;
 
 }
@@ -1339,7 +1459,7 @@ return $default(_that.status,_that.roomId,_that.peerId,_that.callType,_that.isMu
 
 
 class _CallState implements CallState {
-  const _CallState({this.status = CallStatus.idle, this.roomId, this.peerId, this.callType = 'audio', this.isMuted = false, this.isCameraOff = false, this.isSpeakerOn = false, this.callMode = 'direct',  List<String> participantIds = const <String>[], this.isSignalingConnected = false, this.errorMessage, this.elapsed = Duration.zero, this.pendingRemoteOfferSdp, this.remoteStreamTick = 0}): _participantIds = participantIds;
+  const _CallState({this.status = CallStatus.idle, this.roomId, this.peerId, this.callType = 'audio', this.isMuted = false, this.isCameraOff = false, this.isSpeakerOn = false, this.callMode = 'direct',  List<String> participantIds = const <String>[], this.isSignalingConnected = false, this.errorMessage, this.elapsed = Duration.zero, this.pendingRemoteOfferSdp, this.remoteStreamTick = 0, this.subtitlesEnabled = false, this.subtitleText, this.peerPreferredLanguage}): _participantIds = participantIds;
   
 
 @override@JsonKey() final  CallStatus status;
@@ -1369,6 +1489,16 @@ class _CallState implements CallState {
 /// hiệu để đọc lại CallBloc.remoteStream và gán vào RTCVideoRenderer,
 /// vì bản thân MediaStream không nằm trong state (xem ghi chú trên).
 @override@JsonKey() final  int remoteStreamTick;
+/// Translated Call (docs/CALL_SYSTEM.md §8) — user tự bật, chỉ áp dụng
+/// cho call 1-1 đã connected (v1). subtitleText là dòng dịch MỚI NHẤT,
+/// null nếu tắt phụ đề hoặc chưa có câu nào được dịch xong.
+@override@JsonKey() final  bool subtitlesEnabled;
+@override final  String? subtitleText;
+/// Ngôn ngữ NGƯỜI KIA đang nói — Server tự điền vào offer/answer (xem
+/// SignalingMessage.preferredLanguage), dùng để ép cứng ASR thay vì để
+/// Whisper tự đoán. null nếu chưa nhận được offer/answer nào có field
+/// này (vd. đang outgoingRinging, chưa có answer).
+@override final  String? peerPreferredLanguage;
 
 /// Create a copy of CallState
 /// with the given fields replaced by the non-null parameter values.
@@ -1380,16 +1510,16 @@ _$CallStateCopyWith<_CallState> get copyWith => __$CallStateCopyWithImpl<_CallSt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CallState&&(identical(other.status, status) || other.status == status)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.peerId, peerId) || other.peerId == peerId)&&(identical(other.callType, callType) || other.callType == callType)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isCameraOff, isCameraOff) || other.isCameraOff == isCameraOff)&&(identical(other.isSpeakerOn, isSpeakerOn) || other.isSpeakerOn == isSpeakerOn)&&(identical(other.callMode, callMode) || other.callMode == callMode)&&const DeepCollectionEquality().equals(other._participantIds, _participantIds)&&(identical(other.isSignalingConnected, isSignalingConnected) || other.isSignalingConnected == isSignalingConnected)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.elapsed, elapsed) || other.elapsed == elapsed)&&(identical(other.pendingRemoteOfferSdp, pendingRemoteOfferSdp) || other.pendingRemoteOfferSdp == pendingRemoteOfferSdp)&&(identical(other.remoteStreamTick, remoteStreamTick) || other.remoteStreamTick == remoteStreamTick));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CallState&&(identical(other.status, status) || other.status == status)&&(identical(other.roomId, roomId) || other.roomId == roomId)&&(identical(other.peerId, peerId) || other.peerId == peerId)&&(identical(other.callType, callType) || other.callType == callType)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isCameraOff, isCameraOff) || other.isCameraOff == isCameraOff)&&(identical(other.isSpeakerOn, isSpeakerOn) || other.isSpeakerOn == isSpeakerOn)&&(identical(other.callMode, callMode) || other.callMode == callMode)&&const DeepCollectionEquality().equals(other._participantIds, _participantIds)&&(identical(other.isSignalingConnected, isSignalingConnected) || other.isSignalingConnected == isSignalingConnected)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.elapsed, elapsed) || other.elapsed == elapsed)&&(identical(other.pendingRemoteOfferSdp, pendingRemoteOfferSdp) || other.pendingRemoteOfferSdp == pendingRemoteOfferSdp)&&(identical(other.remoteStreamTick, remoteStreamTick) || other.remoteStreamTick == remoteStreamTick)&&(identical(other.subtitlesEnabled, subtitlesEnabled) || other.subtitlesEnabled == subtitlesEnabled)&&(identical(other.subtitleText, subtitleText) || other.subtitleText == subtitleText)&&(identical(other.peerPreferredLanguage, peerPreferredLanguage) || other.peerPreferredLanguage == peerPreferredLanguage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,roomId,peerId,callType,isMuted,isCameraOff,isSpeakerOn,callMode,const DeepCollectionEquality().hash(_participantIds),isSignalingConnected,errorMessage,elapsed,pendingRemoteOfferSdp,remoteStreamTick);
+int get hashCode => Object.hash(runtimeType,status,roomId,peerId,callType,isMuted,isCameraOff,isSpeakerOn,callMode,const DeepCollectionEquality().hash(_participantIds),isSignalingConnected,errorMessage,elapsed,pendingRemoteOfferSdp,remoteStreamTick,subtitlesEnabled,subtitleText,peerPreferredLanguage);
 
 @override
 String toString() {
-  return 'CallState(status: $status, roomId: $roomId, peerId: $peerId, callType: $callType, isMuted: $isMuted, isCameraOff: $isCameraOff, isSpeakerOn: $isSpeakerOn, callMode: $callMode, participantIds: $participantIds, isSignalingConnected: $isSignalingConnected, errorMessage: $errorMessage, elapsed: $elapsed, pendingRemoteOfferSdp: $pendingRemoteOfferSdp, remoteStreamTick: $remoteStreamTick)';
+  return 'CallState(status: $status, roomId: $roomId, peerId: $peerId, callType: $callType, isMuted: $isMuted, isCameraOff: $isCameraOff, isSpeakerOn: $isSpeakerOn, callMode: $callMode, participantIds: $participantIds, isSignalingConnected: $isSignalingConnected, errorMessage: $errorMessage, elapsed: $elapsed, pendingRemoteOfferSdp: $pendingRemoteOfferSdp, remoteStreamTick: $remoteStreamTick, subtitlesEnabled: $subtitlesEnabled, subtitleText: $subtitleText, peerPreferredLanguage: $peerPreferredLanguage)';
 }
 
 
@@ -1400,7 +1530,7 @@ abstract mixin class _$CallStateCopyWith<$Res> implements $CallStateCopyWith<$Re
   factory _$CallStateCopyWith(_CallState value, $Res Function(_CallState) _then) = __$CallStateCopyWithImpl;
 @override @useResult
 $Res call({
- CallStatus status, String? roomId, String? peerId, String callType, bool isMuted, bool isCameraOff, bool isSpeakerOn, String callMode, List<String> participantIds, bool isSignalingConnected, String? errorMessage, Duration elapsed, String? pendingRemoteOfferSdp, int remoteStreamTick
+ CallStatus status, String? roomId, String? peerId, String callType, bool isMuted, bool isCameraOff, bool isSpeakerOn, String callMode, List<String> participantIds, bool isSignalingConnected, String? errorMessage, Duration elapsed, String? pendingRemoteOfferSdp, int remoteStreamTick, bool subtitlesEnabled, String? subtitleText, String? peerPreferredLanguage
 });
 
 
@@ -1417,7 +1547,7 @@ class __$CallStateCopyWithImpl<$Res>
 
 /// Create a copy of CallState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? roomId = freezed,Object? peerId = freezed,Object? callType = null,Object? isMuted = null,Object? isCameraOff = null,Object? isSpeakerOn = null,Object? callMode = null,Object? participantIds = null,Object? isSignalingConnected = null,Object? errorMessage = freezed,Object? elapsed = null,Object? pendingRemoteOfferSdp = freezed,Object? remoteStreamTick = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? roomId = freezed,Object? peerId = freezed,Object? callType = null,Object? isMuted = null,Object? isCameraOff = null,Object? isSpeakerOn = null,Object? callMode = null,Object? participantIds = null,Object? isSignalingConnected = null,Object? errorMessage = freezed,Object? elapsed = null,Object? pendingRemoteOfferSdp = freezed,Object? remoteStreamTick = null,Object? subtitlesEnabled = null,Object? subtitleText = freezed,Object? peerPreferredLanguage = freezed,}) {
   return _then(_CallState(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as CallStatus,roomId: freezed == roomId ? _self.roomId : roomId // ignore: cast_nullable_to_non_nullable
@@ -1433,7 +1563,10 @@ as bool,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessag
 as String?,elapsed: null == elapsed ? _self.elapsed : elapsed // ignore: cast_nullable_to_non_nullable
 as Duration,pendingRemoteOfferSdp: freezed == pendingRemoteOfferSdp ? _self.pendingRemoteOfferSdp : pendingRemoteOfferSdp // ignore: cast_nullable_to_non_nullable
 as String?,remoteStreamTick: null == remoteStreamTick ? _self.remoteStreamTick : remoteStreamTick // ignore: cast_nullable_to_non_nullable
-as int,
+as int,subtitlesEnabled: null == subtitlesEnabled ? _self.subtitlesEnabled : subtitlesEnabled // ignore: cast_nullable_to_non_nullable
+as bool,subtitleText: freezed == subtitleText ? _self.subtitleText : subtitleText // ignore: cast_nullable_to_non_nullable
+as String?,peerPreferredLanguage: freezed == peerPreferredLanguage ? _self.peerPreferredLanguage : peerPreferredLanguage // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

@@ -35,6 +35,7 @@ import '../../features/message/domain/usecases/create_conversation_usecase.dart'
 import '../../features/message/domain/usecases/leave_conversation_usecase.dart';
 import '../../features/message/domain/usecases/list_conversations_usecase.dart';
 import '../../features/message/domain/usecases/list_messages_usecase.dart';
+import '../../features/translation/data/services/model_download_service.dart';
 import '../network/auth_interceptor.dart';
 import '../network/dio_client.dart';
 import '../network/force_logout_interceptor.dart';
@@ -85,6 +86,7 @@ Future<void> setupServiceLocator() async {
   getIt.registerFactory(() => GetTurnCredentialsUseCase(getIt()));
   getIt.registerFactory(() => CreateGroupCallUseCase(getIt()));
   getIt.registerFactory(() => JoinGroupCallUseCase(getIt()));
+  getIt.registerLazySingleton(() => ModelDownloadService());
   getIt.registerLazySingleton(
     () => CallBloc(
       repository: getIt(),
@@ -92,6 +94,7 @@ Future<void> setupServiceLocator() async {
       createGroupCallUseCase: getIt(),
       joinGroupCallUseCase: getIt(),
       tokenStorage: getIt(),
+      modelDownloadService: getIt(),
     ),
   );
 

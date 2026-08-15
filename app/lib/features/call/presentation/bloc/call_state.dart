@@ -54,5 +54,17 @@ sealed class CallState with _$CallState {
     /// hiệu để đọc lại CallBloc.remoteStream và gán vào RTCVideoRenderer,
     /// vì bản thân MediaStream không nằm trong state (xem ghi chú trên).
     @Default(0) int remoteStreamTick,
+
+    /// Translated Call (docs/CALL_SYSTEM.md §8) — user tự bật, chỉ áp dụng
+    /// cho call 1-1 đã connected (v1). subtitleText là dòng dịch MỚI NHẤT,
+    /// null nếu tắt phụ đề hoặc chưa có câu nào được dịch xong.
+    @Default(false) bool subtitlesEnabled,
+    String? subtitleText,
+
+    /// Ngôn ngữ NGƯỜI KIA đang nói — Server tự điền vào offer/answer (xem
+    /// SignalingMessage.preferredLanguage), dùng để ép cứng ASR thay vì để
+    /// Whisper tự đoán. null nếu chưa nhận được offer/answer nào có field
+    /// này (vd. đang outgoingRinging, chưa có answer).
+    String? peerPreferredLanguage,
   }) = _CallState;
 }

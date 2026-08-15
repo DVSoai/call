@@ -627,6 +627,27 @@ class _InCallView extends StatelessWidget {
             style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
+        // Phụ đề dịch (Translated Call, §8) — chỉ hiện khi user đã bật và
+        // có câu vừa dịch xong, tự biến mất khi subtitleText về null (câu
+        // im lặng/tắt phụ đề) thay vì để 1 khung trống chiếm chỗ.
+        if (state.subtitlesEnabled && state.subtitleText != null && state.subtitleText!.isNotEmpty)
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 108,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                state.subtitleText!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+          ),
         Positioned(
           left: 0,
           right: 0,
@@ -664,6 +685,15 @@ class _InCallView extends StatelessWidget {
                         onPressed: () => context.read<CallBloc>().add(const CallEvent.switchCameraRequested()),
                       ),
                     if (isVideo) const SizedBox(width: 16),
+                    // Phụ đề chỉ có ý nghĩa cho call 1-1 (v1, xem
+                    // docs/CALL_SYSTEM.md §8) — callMode luôn 'direct' ở
+                    // _InCallView (group dùng _GroupInCallView riêng) nên
+                    // không cần check thêm điều kiện ở đây.
+                    _ControlButton(
+                      icon: state.subtitlesEnabled ? Icons.closed_caption : Icons.closed_caption_off,
+                      onPressed: () => context.read<CallBloc>().add(const CallEvent.subtitlesToggled()),
+                    ),
+                    const SizedBox(width: 16),
                     FloatingActionButton(
                       heroTag: 'hangup',
                       backgroundColor: Colors.red,

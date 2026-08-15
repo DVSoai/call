@@ -73,4 +73,10 @@ sealed class CallEvent with _$CallEvent {
       CallPeerConnectionStateChanged;
 
   const factory CallEvent.tick() = CallTicked;
+
+  /// User bấm nút CC bật/tắt phụ đề dịch (Translated Call, chỉ 1-1 v1).
+  const factory CallEvent.subtitlesToggled() = CallSubtitlesToggled;
+
+  /// Internal — TranslationPipeline vừa dịch xong 1 câu.
+  const factory CallEvent.subtitleUpdated(String text) = CallSubtitleUpdated;
 }
