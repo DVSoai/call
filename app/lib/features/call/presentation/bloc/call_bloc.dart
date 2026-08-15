@@ -58,6 +58,8 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     on<CallSignalingMessageReceived>(_onSignalingMessageReceived);
     on<CallLocalIceCandidateGenerated>(_onLocalIceCandidateGenerated);
     on<CallRemoteStreamReceived>((event, emit) => emit(state.copyWith(remoteStreamTick: state.remoteStreamTick + 1)));
+    on<CallGroupRemoteStreamsChanged>(
+        (event, emit) => emit(state.copyWith(remoteStreamTick: state.remoteStreamTick + 1)));
     on<CallPeerConnectionStateChanged>(_onPeerConnectionStateChanged);
     on<CallTicked>((event, emit) => emit(state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1))));
   }
@@ -77,6 +79,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   StreamSubscription<SignalingMessage>? _signalingSub;
   StreamSubscription<RTCIceCandidate>? _localIceSub;
   StreamSubscription<MediaStream>? _remoteStreamSub;
+  StreamSubscription<Map<String, MediaStream>>? _groupRemoteStreamsSub;
   StreamSubscription<RTCPeerConnectionState>? _connectionStateSub;
   Timer? _ticker;
   Timer? _ringTimer;
@@ -127,6 +130,11 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   MediaStream? get localStream => _webRtcService?.localStream;
   MediaStream? get remoteStream => _webRtcService?.remoteStream;
+
+  /// Group — key = userID người publish (SFU gán MediaStream.id = userID,
+  /// xem internal/sfu/room.go). UI đọc lại mỗi khi remoteStreamTick đổi,
+  /// giống cách remoteStream (1-1) đang được đọc lại — xem call_page.dart.
+  Map<String, MediaStream> get groupRemoteStreams => _webRtcService?.groupRemoteStreams ?? const {};
 
   Future<void> _onSignalingStarted(CallSignalingStarted event, Emitter<CallState> emit) async {
     if (_repository.isSignalingConnected) return;
@@ -563,11 +571,50 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     return servers!;
   }
 
+  /// Tạo room Group Call qua POST /calls/group — dùng chung [callApi] như
+  /// _fetchIceServers, giữ đúng convention gọi REST của cả file này.
+  Future<String> _createGroupCallRoom(List<String> participantIds) async {
+    String? roomId;
+    String? error;
+    await callApi<String, CreateGroupCallParams>(
+      useCase: _createGroupCallUseCase,
+      param: CreateGroupCallParams(participantIds: participantIds, callType: 'audio'),
+      onSuccess: (id) async => roomId = id,
+      onFailure: (message) => error = message,
+    );
+    if (roomId == null) {
+      throw StateError(error ?? 'Không tạo được group call');
+    }
+    return roomId!;
+  }
+
+  /// POST /calls/:roomId/join — Server sẽ tự gửi offer xuống qua WS sau khi
+  /// gọi xong (xem _handleGroupOffer).
+  Future<void> _joinGroupCall(String roomId) async {
+    bool ok = false;
+    String? error;
+    await callApi<void, String>(
+      useCase: _joinGroupCallUseCase,
+      param: roomId,
+      onSuccess: (_) async => ok = true,
+      onFailure: (message) => error = message,
+    );
+    if (!ok) {
+      throw StateError(error ?? 'Không tham gia được group call');
+    }
+  }
+
   WebRtcService _startNewWebRtcSession() {
     final service = WebRtcService();
     _webRtcService = service;
     _localIceSub = service.onLocalIceCandidate.listen((c) => add(CallEvent.localIceCandidateGenerated(c)));
     _remoteStreamSub = service.onRemoteStream.listen((s) => add(CallEvent.remoteStreamReceived(s)));
+    // Group: nhiều remoteStream cùng lúc (1/participant) — dùng chung
+    // remoteStreamTick làm tín hiệu "có gì đổi, đọc lại groupRemoteStreams"
+    // (giống hệt cơ chế remoteStream đã dùng cho 1-1, không cần thêm field
+    // state riêng).
+    _groupRemoteStreamsSub =
+        service.onGroupRemoteStreamsChanged.listen((_) => add(const CallEvent.groupRemoteStreamsChanged()));
     _connectionStateSub = service.onConnectionState.listen((s) => add(CallEvent.peerConnectionStateChanged(s)));
     return service;
   }
@@ -577,9 +624,11 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     _ticker = null;
     await _localIceSub?.cancel();
     await _remoteStreamSub?.cancel();
+    await _groupRemoteStreamsSub?.cancel();
     await _connectionStateSub?.cancel();
     _localIceSub = null;
     _remoteStreamSub = null;
+    _groupRemoteStreamsSub = null;
     _connectionStateSub = null;
     await _webRtcService?.dispose();
     _webRtcService = null;

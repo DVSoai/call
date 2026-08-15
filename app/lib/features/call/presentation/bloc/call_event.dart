@@ -58,6 +58,12 @@ sealed class CallEvent with _$CallEvent {
 
   const factory CallEvent.remoteStreamReceived(MediaStream stream) = CallRemoteStreamReceived;
 
+  /// Group — bắn khi WebRtcService.groupRemoteStreams đổi (participant mới
+  /// publish, hoặc 1 người rời). Không mang theo data, chỉ để UI biết cần
+  /// đọc lại CallBloc.groupRemoteStreams — giống remoteStreamReceived nhưng
+  /// cho nhiều stream cùng lúc.
+  const factory CallEvent.groupRemoteStreamsChanged() = CallGroupRemoteStreamsChanged;
+
   const factory CallEvent.peerConnectionStateChanged(RTCPeerConnectionState state) =
       CallPeerConnectionStateChanged;
 
