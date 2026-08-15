@@ -133,6 +133,8 @@ class WebRtcService {
     }
   }
 
+  Future<void> setSpeakerphoneOn(bool enabled) => Helper.setSpeakerphoneOn(enabled);
+
   RTCPeerConnection _requirePeerConnection() {
     final pc = _peerConnection;
     if (pc == null) {

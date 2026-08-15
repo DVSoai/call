@@ -32,6 +32,7 @@ sealed class CallState with _$CallState {
     @Default('audio') String callType,
     @Default(false) bool isMuted,
     @Default(false) bool isCameraOff,
+    @Default(false) bool isSpeakerOn,
     @Default(false) bool isSignalingConnected,
     String? errorMessage,
     @Default(Duration.zero) Duration elapsed,

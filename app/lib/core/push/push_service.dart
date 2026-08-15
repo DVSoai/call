@@ -39,6 +39,10 @@ Future<void> _showIncomingCallUI(Map<String, dynamic> data) async {
     nameCaller: data['callerName'] as String? ?? 'Người dùng',
     appName: 'call_video',
     type: (data['callType'] as String?) == 'video' ? 1 : 0,
+    // Khớp ringingTTL backend (30s) + ring-timeout phía CallBloc — quá hạn
+    // mà không tương tác thì plugin tự bắn actionCallTimeout, không đổ
+    // chuông vô thời hạn.
+    duration: 30000,
     extra: <String, dynamic>{
       'roomId': roomId,
       'callerId': data['callerId'],
@@ -173,6 +177,7 @@ class PushService {
       nameCaller: state.peerId ?? 'Người dùng',
       appName: 'call_video',
       type: state.callType == 'video' ? 1 : 0,
+      duration: 30000,
       extra: <String, dynamic>{'roomId': roomId},
       android: const callkit.AndroidParams(
         isCustomNotification: true,

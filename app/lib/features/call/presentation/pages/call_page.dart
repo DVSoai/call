@@ -275,6 +275,11 @@ class _InCallView extends StatelessWidget {
                 onPressed: () => context.read<CallBloc>().add(const CallEvent.muteToggled()),
               ),
               const SizedBox(width: 16),
+              _ControlButton(
+                icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
+                onPressed: () => context.read<CallBloc>().add(const CallEvent.speakerToggled()),
+              ),
+              const SizedBox(width: 16),
               if (isVideo)
                 _ControlButton(
                   icon: state.isCameraOff ? Icons.videocam_off : Icons.videocam,

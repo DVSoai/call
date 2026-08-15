@@ -45,12 +45,18 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     on<CallMuteToggled>(_onMuteToggled);
     on<CallCameraToggled>(_onCameraToggled);
     on<CallSwitchCameraRequested>(_onSwitchCameraRequested);
+    on<CallSpeakerToggled>(_onSpeakerToggled);
+    on<CallRingTimedOut>(_onRingTimedOut);
     on<CallSignalingMessageReceived>(_onSignalingMessageReceived);
     on<CallLocalIceCandidateGenerated>(_onLocalIceCandidateGenerated);
     on<CallRemoteStreamReceived>((event, emit) => emit(state.copyWith(remoteStreamTick: state.remoteStreamTick + 1)));
     on<CallPeerConnectionStateChanged>(_onPeerConnectionStateChanged);
     on<CallTicked>((event, emit) => emit(state.copyWith(elapsed: state.elapsed + const Duration(seconds: 1))));
   }
+
+  // Khớp ringingTTL (30s) phía backend — Zalo/Messenger đều tự huỷ cuộc gọi
+  // không ai bắt máy sau một khoảng cố định thay vì đổ chuông vô thời hạn.
+  static const _ringTimeout = Duration(seconds: 30);
 
   final CallRepository _repository;
   final GetTurnCredentialsUseCase _getTurnCredentialsUseCase;
@@ -63,6 +69,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   StreamSubscription<MediaStream>? _remoteStreamSub;
   StreamSubscription<RTCPeerConnectionState>? _connectionStateSub;
   Timer? _ticker;
+  Timer? _ringTimer;
 
   // roomId user đã bấm Accept trên màn hình cuộc gọi đến kiểu native
   // (CallKit/ConnectionService, xem core/push/push_service.dart) TRƯỚC KHI
@@ -138,6 +145,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       peerId: event.calleeId,
       callType: event.isVideo ? 'video' : 'audio',
     ));
+    _startRingTimer(roomId);
 
     try {
       final service = _startNewWebRtcSession();
@@ -163,6 +171,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   Future<void> _onAcceptRequested(CallAcceptRequested event, Emitter<CallState> emit) async {
     if (state.status != CallStatus.incomingRinging || state.pendingRemoteOfferSdp == null) return;
+    _cancelRingTimer();
 
     final myId = await _tokenStorage.readUserId() ?? '';
     emit(state.copyWith(status: CallStatus.connecting));
@@ -190,6 +199,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   Future<void> _onRejectRequested(CallRejectRequested event, Emitter<CallState> emit) async {
     if (state.status != CallStatus.incomingRinging) return;
+    _cancelRingTimer();
     final myId = await _tokenStorage.readUserId() ?? '';
     _repository.sendSignaling(SignalingMessage(
       type: SignalingMessageType.callReject,
@@ -206,6 +216,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   }
 
   Future<void> _onEndRequested(CallEndRequested event, Emitter<CallState> emit) async {
+    _cancelRingTimer();
     if (state.roomId != null && state.peerId != null && state.status != CallStatus.idle) {
       final myId = await _tokenStorage.readUserId() ?? '';
       _repository.sendSignaling(SignalingMessage(
@@ -223,6 +234,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       pendingRemoteOfferSdp: null,
       isMuted: false,
       isCameraOff: false,
+      isSpeakerOn: false,
       elapsed: Duration.zero,
     ));
   }
@@ -244,6 +256,47 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   Future<void> _onSwitchCameraRequested(CallSwitchCameraRequested event, Emitter<CallState> emit) async {
     await _webRtcService?.switchCamera();
+  }
+
+  Future<void> _onSpeakerToggled(CallSpeakerToggled event, Emitter<CallState> emit) async {
+    final on = !state.isSpeakerOn;
+    await _webRtcService?.setSpeakerphoneOn(on);
+    emit(state.copyWith(isSpeakerOn: on));
+  }
+
+  /// 30s không ai bắt máy — tự huỷ giống Zalo/Messenger thay vì đổ chuông
+  /// vô thời hạn (roomId trong event để bỏ qua timer cũ nếu cuộc gọi đã đổi
+  /// — vd. reject xong gọi lại ngay, timer trước đó có thể còn đang chờ).
+  Future<void> _onRingTimedOut(CallRingTimedOut event, Emitter<CallState> emit) async {
+    if (state.roomId != event.roomId) return;
+
+    if (state.status == CallStatus.outgoingRinging) {
+      // Phía gọi tự huỷ — backend ghi nhận "missed" vì room vẫn đang RINGING
+      // (xem Hub.finalizeRoom), không phải "completed".
+      final myId = await _tokenStorage.readUserId() ?? '';
+      _repository.sendSignaling(SignalingMessage(
+        type: SignalingMessageType.callEnd,
+        from: myId,
+        to: state.peerId ?? '',
+        callId: state.roomId ?? '',
+      ));
+      await _cleanupWebRtc();
+      emit(state.copyWith(status: CallStatus.ended, errorMessage: 'Không có phản hồi'));
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!isClosed && state.status == CallStatus.ended) {
+        emit(state.copyWith(status: CallStatus.idle, roomId: null, peerId: null, pendingRemoteOfferSdp: null));
+      }
+    } else if (state.status == CallStatus.incomingRinging) {
+      // Phía nhận tự dọn màn hình cục bộ — không cần gửi gì thêm, caller đã
+      // tự có timer riêng ở trên lo việc báo "missed" về backend.
+      await _cleanupWebRtc();
+      emit(state.copyWith(
+        status: CallStatus.idle,
+        roomId: null,
+        peerId: null,
+        pendingRemoteOfferSdp: null,
+      ));
+    }
   }
 
   Future<void> _onSignalingMessageReceived(CallSignalingMessageReceived event, Emitter<CallState> emit) async {
@@ -281,6 +334,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       callType: msg.callType ?? 'audio',
       pendingRemoteOfferSdp: msg.sdp,
     ));
+    _startRingTimer(msg.callId);
 
     if (_autoAcceptRoomIds.remove(msg.callId)) {
       add(const CallEvent.acceptRequested());
@@ -289,6 +343,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   Future<void> _handleAnswer(SignalingMessage msg, Emitter<CallState> emit) async {
     if (msg.callId != state.roomId || _webRtcService == null || msg.sdp == null) return;
+    _cancelRingTimer();
     emit(state.copyWith(status: CallStatus.connecting));
     try {
       await _webRtcService!.applyRemoteAnswer(msg.sdp!);
@@ -304,6 +359,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   Future<void> _handleRemoteEnd(SignalingMessage msg, Emitter<CallState> emit) async {
     if (msg.callId != state.roomId) return;
+    _cancelRingTimer();
     await _cleanupWebRtc();
     emit(state.copyWith(
       status: CallStatus.ended,
@@ -331,7 +387,12 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   Future<void> _onPeerConnectionStateChanged(CallPeerConnectionStateChanged event, Emitter<CallState> emit) async {
     switch (event.state) {
       case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
-        emit(state.copyWith(status: CallStatus.connected));
+        // Video: mặc định bật loa (đang nhìn màn hình, không áp tai) — audio
+        // giữ mặc định tai nghe/loa trong (isSpeakerOn: false) như cuộc gọi
+        // thường.
+        final speakerOn = state.callType == 'video';
+        await _webRtcService?.setSpeakerphoneOn(speakerOn);
+        emit(state.copyWith(status: CallStatus.connected, isSpeakerOn: speakerOn));
         _startTicker();
       case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
       case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
@@ -387,6 +448,21 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => add(const CallEvent.tick()));
+  }
+
+  /// Bắt đầu đếm ngược 30s cho 1 roomId đang ringing (outgoing hoặc
+  /// incoming) — bắn CallEvent.ringTimedOut nếu hết giờ mà vẫn chưa
+  /// accept/reject/answer. KHÔNG gọi emit() trực tiếp trong callback Timer
+  /// (chạy ngoài vòng đời handler) — phải add() event để đi qua handler
+  /// đăng ký đàng hoàng, đúng nguyên tắc Bloc.
+  void _startRingTimer(String roomId) {
+    _ringTimer?.cancel();
+    _ringTimer = Timer(_ringTimeout, () => add(CallEvent.ringTimedOut(roomId)));
+  }
+
+  void _cancelRingTimer() {
+    _ringTimer?.cancel();
+    _ringTimer = null;
   }
 
   @override

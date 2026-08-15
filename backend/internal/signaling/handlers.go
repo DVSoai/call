@@ -219,6 +219,14 @@ func (h *Hub) finalizeRoom(ctx context.Context, roomID, status string) {
 		}
 	}
 
+	// call-end tới lúc room vẫn đang RINGING (chưa ai answer, kể cả do
+	// caller tự huỷ hoặc do Client tự huỷ lúc hết 30s không ai bắt máy) —
+	// đây là "missed", không phải "completed" (status đó chỉ có ý nghĩa cho
+	// cuộc gọi đã thực sự kết nối).
+	if status == entity.StatusCompleted && room.Status == calls.StatusRinging {
+		status = entity.StatusMissed
+	}
+
 	now := time.Now()
 	entry := entity.CallHistoryEntry{
 		RoomID:       room.RoomID,
