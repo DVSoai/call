@@ -10,6 +10,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Cho phép notification cuộc gọi đến hiện full-screen kể cả khi khoá màn hình -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Bật ConnectionService/Telecom thật (self-managed) cho flutter_callkit_incoming — để OS
+         tự điều phối đúng với cuộc gọi SIM (audio focus, hold...). Permission "normal", tự cấp
+         lúc cài, không cần xin runtime. Thiếu dòng này plugin âm thầm fallback về notification
+         thường (không tương tác được với cuộc gọi SIM). -->
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />

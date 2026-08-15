@@ -64,6 +64,18 @@ func (h *Hub) handleOffer(ctx context.Context, c *Client, m Message) {
 		callType = "audio"
 	}
 
+	// Callee đã có 1 lời mời khác đang chờ trả lời (chưa answer/reject/end)
+	// — coi như bận, trả reject ngay cho caller mới thay vì chồng thêm 1
+	// room/CallKit UI thứ 2 (ghi đè pending_offer cũ sẽ làm "mất" lời mời
+	// đầu — nghiêm trọng nhất khi callee đang offline, không có Client nào
+	// sống để tự reject giúp như trường hợp online, xem CallBloc._handleIncomingOffer).
+	if existingRoomID, err := h.store.GetPendingOffer(ctx, m.To); err != nil {
+		log.Printf("signaling: GetPendingOffer lỗi cho user %s: %v", m.To, err)
+	} else if existingRoomID != "" {
+		h.forward(ctx, Message{Type: TypeCallReject, From: m.To, To: c.userID, CallID: roomID})
+		return
+	}
+
 	room := calls.RoomState{
 		RoomID:       roomID,
 		CallType:     callType,

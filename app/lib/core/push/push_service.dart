@@ -152,6 +152,12 @@ class PushService {
       case callkit.CallEventActionCallTimeout(:final id):
         AppLogger.i('PushService: CallKit timeout, id=$id');
         FlutterCallkitIncoming.endCall(id);
+      case callkit.CallEventActionCallToggleHold(:final isOnHold):
+        // Android Telecom tự hold cuộc gọi này khi có cuộc gọi SIM chen
+        // ngang (xem CallkitConnection.onHold trong plugin) — chỉ báo lại
+        // sự kiện, phải tự mute/unmute mic ở đây.
+        AppLogger.i('PushService: CallKit toggle hold, isOnHold=$isOnHold');
+        callBloc.setSystemHold(isOnHold);
       default:
         break;
     }

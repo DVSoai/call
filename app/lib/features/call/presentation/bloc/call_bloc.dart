@@ -94,6 +94,20 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     }
   }
 
+  // true khi Telecom (ConnectionService, xem CallkitConnection.onHold trong
+  // plugin flutter_callkit_incoming) đang hold cuộc gọi này để nhường audio
+  // cho 1 cuộc gọi SIM khác — tách riêng khỏi isMuted (do user tự bấm) để
+  // unhold không vô tình unmute cuộc gọi mà user đã tự mute từ trước.
+  bool _systemHeld = false;
+
+  /// Gọi từ PushService khi nhận CallEventActionCallToggleHold — Android
+  /// Telecom tự quyết định hold/unhold (vd. SIM call chen ngang), plugin chỉ
+  /// báo lại sự kiện, mic phải tự mute/unmute ở đây (không tự động).
+  Future<void> setSystemHold(bool isOnHold) async {
+    _systemHeld = isOnHold;
+    await _webRtcService?.setMuted(_systemHeld || state.isMuted);
+  }
+
   MediaStream? get localStream => _webRtcService?.localStream;
   MediaStream? get remoteStream => _webRtcService?.remoteStream;
 
@@ -215,7 +229,10 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   Future<void> _onMuteToggled(CallMuteToggled event, Emitter<CallState> emit) async {
     final muted = !state.isMuted;
-    await _webRtcService?.setMuted(muted);
+    // Kết hợp với _systemHeld (Telecom hold do SIM call chen ngang) — nếu
+    // đang bị hold thì mic vẫn phải câm bất kể user bấm unmute, tránh lộ mic
+    // trong lúc Android đang ưu tiên audio cho cuộc gọi SIM.
+    await _webRtcService?.setMuted(muted || _systemHeld);
     emit(state.copyWith(isMuted: muted));
   }
 
