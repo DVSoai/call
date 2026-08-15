@@ -26,8 +26,11 @@ type Peer struct {
 	// gọi đồng thời (xem cảnh báo trong sfu-ws reference implementation).
 	negotiateMu sync.Mutex
 
-	mu      sync.Mutex
-	senders map[string]*webrtc.RTPSender // key = userID nguồn track đang subscribe
+	mu sync.Mutex
+	// senders[sourceUserID][kind] — 1 user có thể publish CẢ audio lẫn
+	// video cùng lúc (group video call), mỗi track cần track riêng khi
+	// RemoveTrack lúc source rời (xem Room.removePeer).
+	senders map[string]map[webrtc.RTPCodecType]*webrtc.RTPSender
 	closed  bool
 }
 

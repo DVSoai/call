@@ -466,7 +466,12 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
         callType: msg.callType ?? 'audio',
         callMode: 'group',
       ));
-      _startRingTimer(msg.callId);
+      // KHÔNG áp ring-timeout 30s như 1-1 — cuộc gọi nhóm vẫn "sống" độc
+      // lập với việc user này có bắt máy hay không (người khác vẫn đang
+      // nói chuyện), join trễ vẫn hợp lệ (room được ExtendGroupRoom gia
+      // hạn liên tục). Áp timer ở đây từng gây bug thật: test nhiều thiết
+      // bị mất >30s để bấm "Nghe" ở máy sau, timer tự chuyển về idle trước
+      // khi bấm kịp → router điều hướng nhầm về Home.
       if (_autoAcceptRoomIds.remove(msg.callId)) {
         add(const CallEvent.acceptRequested());
       }
