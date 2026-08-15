@@ -5,6 +5,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../../core/bloc/abstract_bloc_with_api.dart';
 import '../../../../core/network/session_expiry_notifier.dart';
+import '../../../../core/push/native_auth_bridge.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/dev_login_usecase.dart';
@@ -41,6 +42,12 @@ class AuthBloc extends BlocWithApi<AuthEvent, AuthState> {
       emit(state.copyWith(status: AuthStatus.unauthenticated));
       return;
     }
+    // Đồng bộ lại token cho native (CallRejectNativeHandler) mỗi lần app mở
+    // với session đã có sẵn — không chỉ lúc login mới (saveSession). Nếu
+    // không, session cũ (đăng nhập từ trước khi có NativeAuthBridge, hoặc
+    // cài lại app) sẽ không có token bên native, khiến reject lúc app bị
+    // kill không gửi được (âm thầm bỏ qua, xem CallRejectNativeHandler.kt).
+    NativeAuthBridge.saveToken(token);
     final user = await _authRepository.getSavedUser();
     emit(state.copyWith(status: AuthStatus.authenticated, user: user));
   }
