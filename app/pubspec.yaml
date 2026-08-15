@@ -59,6 +59,13 @@ dependencies:
   firebase_core: ^4.1.1
   firebase_messaging: ^16.0.4
   flutter_callkit_incoming: ^3.1.5
+  # Translated Call (docs/CALL_SYSTEM.md §8) — ASR (Whisper) + VAD
+  # (silero-vad) on-device, dùng chung 1 thư viện. record: thu mic ra file
+  # WAV cho bài đo baseline độ trễ (§8.6c) — CHỈ dùng cho màn hình đo thử dev,
+  # luồng gọi thật vẫn lấy audio qua flutter_webrtc như cũ.
+  sherpa_onnx: ^1.13.5
+  record: ^6.1.1
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

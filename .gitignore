@@ -2,6 +2,7 @@
 .DS_Store
 .vscode/
 .idea/
+.claude/
 
 # backend Go build output (nếu build binary cục bộ)
 backend/callserver
