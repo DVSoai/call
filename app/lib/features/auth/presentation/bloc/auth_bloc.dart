@@ -9,6 +9,7 @@ import '../../../../core/push/native_auth_bridge.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/dev_login_usecase.dart';
+import '../../domain/usecases/update_preferred_language_usecase.dart';
 
 part 'auth_bloc.freezed.dart';
 part 'auth_event.dart';
@@ -19,12 +20,15 @@ class AuthBloc extends BlocWithApi<AuthEvent, AuthState> {
     required DevLoginUseCase devLoginUseCase,
     required AuthRepository authRepository,
     required SessionExpiryNotifier sessionExpiryNotifier,
+    required UpdatePreferredLanguageUseCase updatePreferredLanguageUseCase,
   })  : _devLoginUseCase = devLoginUseCase,
         _authRepository = authRepository,
+        _updatePreferredLanguageUseCase = updatePreferredLanguageUseCase,
         super(const AuthState()) {
     on<AuthSessionCheckRequested>(_onSessionCheckRequested);
     on<AuthLoginSubmitted>(_onLoginSubmitted);
     on<AuthLoggedOut>(_onLoggedOut);
+    on<AuthPreferredLanguageChanged>(_onPreferredLanguageChanged);
 
     // JWT hết hạn/không hợp lệ (401 ở bất kỳ request nào) → ForceLogoutInterceptor
     // đã xoá token cục bộ, ở đây chỉ cần đồng bộ lại AuthState để router
@@ -34,6 +38,7 @@ class AuthBloc extends BlocWithApi<AuthEvent, AuthState> {
 
   final DevLoginUseCase _devLoginUseCase;
   final AuthRepository _authRepository;
+  final UpdatePreferredLanguageUseCase _updatePreferredLanguageUseCase;
   late final StreamSubscription<void> _sessionExpirySub;
 
   Future<void> _onSessionCheckRequested(AuthSessionCheckRequested event, Emitter<AuthState> emit) async {
@@ -65,6 +70,15 @@ class AuthBloc extends BlocWithApi<AuthEvent, AuthState> {
   Future<void> _onLoggedOut(AuthLoggedOut event, Emitter<AuthState> emit) async {
     await _authRepository.logout();
     emit(const AuthState(status: AuthStatus.unauthenticated));
+  }
+
+  Future<void> _onPreferredLanguageChanged(AuthPreferredLanguageChanged event, Emitter<AuthState> emit) async {
+    await callApi<UserEntity, String>(
+      useCase: _updatePreferredLanguageUseCase,
+      param: event.language,
+      onSuccess: (user) async => emit(state.copyWith(user: user)),
+      onFailure: (message) => emit(state.copyWith(errorMessage: message)),
+    );
   }
 
   @override

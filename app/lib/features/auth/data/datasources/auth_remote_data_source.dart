@@ -25,4 +25,10 @@ class AuthRemoteDataSource {
       user: UserModel.fromJson(data['user'] as Map<String, dynamic>),
     );
   }
+
+  /// PUT /users/preferred-language — trả 204 No Content, không có body để
+  /// parse (xem backend/internal/api/handlers_users.go).
+  Future<void> updatePreferredLanguage(String language) async {
+    await _dio.put('/users/preferred-language', data: {'language': language});
+  }
 }

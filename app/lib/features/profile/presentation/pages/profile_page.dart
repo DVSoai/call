@@ -36,6 +36,16 @@ class ProfilePage extends StatelessWidget {
             onTap: () => context.push('/history'),
           ),
           const Divider(height: 1),
+          // Ngôn ngữ NGHE (Translated Call, docs/CALL_SYSTEM.md §8) — v1 chỉ
+          // Việt/Anh, khớp đúng 2 model dịch đã hỗ trợ (ModelDownloadService).
+          ListTile(
+            leading: const Icon(Icons.translate),
+            title: const Text('Ngôn ngữ nghe'),
+            subtitle: Text(_languageLabel(user?.preferredLanguage ?? 'vi')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showLanguagePicker(context, user?.preferredLanguage ?? 'vi'),
+          ),
+          const Divider(height: 1),
           // Đo baseline độ trễ ASR (docs/CALL_SYSTEM.md §8.6c) — công cụ dev,
           // xoá khỏi ProfilePage khi đo xong, không phải tính năng sản phẩm.
           ListTile(
@@ -56,4 +66,34 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
+}
+
+String _languageLabel(String code) => switch (code) {
+      'en' => 'Tiếng Anh',
+      _ => 'Tiếng Việt',
+    };
+
+Future<void> _showLanguagePicker(BuildContext context, String current) async {
+  final bloc = context.read<AuthBloc>();
+  await showModalBottomSheet<void>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final code in const ['vi', 'en'])
+            ListTile(
+              title: Text(_languageLabel(code)),
+              trailing: code == current ? const Icon(Icons.check, color: Colors.blue) : null,
+              onTap: () {
+                if (code != current) {
+                  bloc.add(AuthEvent.preferredLanguageChanged(code));
+                }
+                Navigator.of(sheetContext).pop();
+              },
+            ),
+        ],
+      ),
+    ),
+  );
 }

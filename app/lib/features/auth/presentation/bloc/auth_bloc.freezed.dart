@@ -56,13 +56,14 @@ extension AuthEventPatterns on AuthEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AuthSessionCheckRequested value)?  sessionCheckRequested,TResult Function( AuthLoginSubmitted value)?  loginSubmitted,TResult Function( AuthLoggedOut value)?  loggedOut,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AuthSessionCheckRequested value)?  sessionCheckRequested,TResult Function( AuthLoginSubmitted value)?  loginSubmitted,TResult Function( AuthLoggedOut value)?  loggedOut,TResult Function( AuthPreferredLanguageChanged value)?  preferredLanguageChanged,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case AuthSessionCheckRequested() when sessionCheckRequested != null:
 return sessionCheckRequested(_that);case AuthLoginSubmitted() when loginSubmitted != null:
 return loginSubmitted(_that);case AuthLoggedOut() when loggedOut != null:
-return loggedOut(_that);case _:
+return loggedOut(_that);case AuthPreferredLanguageChanged() when preferredLanguageChanged != null:
+return preferredLanguageChanged(_that);case _:
   return orElse();
 
 }
@@ -80,13 +81,14 @@ return loggedOut(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AuthSessionCheckRequested value)  sessionCheckRequested,required TResult Function( AuthLoginSubmitted value)  loginSubmitted,required TResult Function( AuthLoggedOut value)  loggedOut,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AuthSessionCheckRequested value)  sessionCheckRequested,required TResult Function( AuthLoginSubmitted value)  loginSubmitted,required TResult Function( AuthLoggedOut value)  loggedOut,required TResult Function( AuthPreferredLanguageChanged value)  preferredLanguageChanged,}){
 final _that = this;
 switch (_that) {
 case AuthSessionCheckRequested():
 return sessionCheckRequested(_that);case AuthLoginSubmitted():
 return loginSubmitted(_that);case AuthLoggedOut():
-return loggedOut(_that);}
+return loggedOut(_that);case AuthPreferredLanguageChanged():
+return preferredLanguageChanged(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -100,13 +102,14 @@ return loggedOut(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AuthSessionCheckRequested value)?  sessionCheckRequested,TResult? Function( AuthLoginSubmitted value)?  loginSubmitted,TResult? Function( AuthLoggedOut value)?  loggedOut,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AuthSessionCheckRequested value)?  sessionCheckRequested,TResult? Function( AuthLoginSubmitted value)?  loginSubmitted,TResult? Function( AuthLoggedOut value)?  loggedOut,TResult? Function( AuthPreferredLanguageChanged value)?  preferredLanguageChanged,}){
 final _that = this;
 switch (_that) {
 case AuthSessionCheckRequested() when sessionCheckRequested != null:
 return sessionCheckRequested(_that);case AuthLoginSubmitted() when loginSubmitted != null:
 return loginSubmitted(_that);case AuthLoggedOut() when loggedOut != null:
-return loggedOut(_that);case _:
+return loggedOut(_that);case AuthPreferredLanguageChanged() when preferredLanguageChanged != null:
+return preferredLanguageChanged(_that);case _:
   return null;
 
 }
@@ -123,12 +126,13 @@ return loggedOut(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  sessionCheckRequested,TResult Function( String phone)?  loginSubmitted,TResult Function()?  loggedOut,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  sessionCheckRequested,TResult Function( String phone)?  loginSubmitted,TResult Function()?  loggedOut,TResult Function( String language)?  preferredLanguageChanged,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AuthSessionCheckRequested() when sessionCheckRequested != null:
 return sessionCheckRequested();case AuthLoginSubmitted() when loginSubmitted != null:
 return loginSubmitted(_that.phone);case AuthLoggedOut() when loggedOut != null:
-return loggedOut();case _:
+return loggedOut();case AuthPreferredLanguageChanged() when preferredLanguageChanged != null:
+return preferredLanguageChanged(_that.language);case _:
   return orElse();
 
 }
@@ -146,12 +150,13 @@ return loggedOut();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  sessionCheckRequested,required TResult Function( String phone)  loginSubmitted,required TResult Function()  loggedOut,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  sessionCheckRequested,required TResult Function( String phone)  loginSubmitted,required TResult Function()  loggedOut,required TResult Function( String language)  preferredLanguageChanged,}) {final _that = this;
 switch (_that) {
 case AuthSessionCheckRequested():
 return sessionCheckRequested();case AuthLoginSubmitted():
 return loginSubmitted(_that.phone);case AuthLoggedOut():
-return loggedOut();}
+return loggedOut();case AuthPreferredLanguageChanged():
+return preferredLanguageChanged(_that.language);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -165,12 +170,13 @@ return loggedOut();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  sessionCheckRequested,TResult? Function( String phone)?  loginSubmitted,TResult? Function()?  loggedOut,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  sessionCheckRequested,TResult? Function( String phone)?  loginSubmitted,TResult? Function()?  loggedOut,TResult? Function( String language)?  preferredLanguageChanged,}) {final _that = this;
 switch (_that) {
 case AuthSessionCheckRequested() when sessionCheckRequested != null:
 return sessionCheckRequested();case AuthLoginSubmitted() when loginSubmitted != null:
 return loginSubmitted(_that.phone);case AuthLoggedOut() when loggedOut != null:
-return loggedOut();case _:
+return loggedOut();case AuthPreferredLanguageChanged() when preferredLanguageChanged != null:
+return preferredLanguageChanged(_that.language);case _:
   return null;
 
 }
@@ -307,6 +313,72 @@ String toString() {
 
 
 
+
+/// @nodoc
+
+
+class AuthPreferredLanguageChanged implements AuthEvent {
+  const AuthPreferredLanguageChanged(this.language);
+  
+
+ final  String language;
+
+/// Create a copy of AuthEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AuthPreferredLanguageChangedCopyWith<AuthPreferredLanguageChanged> get copyWith => _$AuthPreferredLanguageChangedCopyWithImpl<AuthPreferredLanguageChanged>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthPreferredLanguageChanged&&(identical(other.language, language) || other.language == language));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,language);
+
+@override
+String toString() {
+  return 'AuthEvent.preferredLanguageChanged(language: $language)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AuthPreferredLanguageChangedCopyWith<$Res> implements $AuthEventCopyWith<$Res> {
+  factory $AuthPreferredLanguageChangedCopyWith(AuthPreferredLanguageChanged value, $Res Function(AuthPreferredLanguageChanged) _then) = _$AuthPreferredLanguageChangedCopyWithImpl;
+@useResult
+$Res call({
+ String language
+});
+
+
+
+
+}
+/// @nodoc
+class _$AuthPreferredLanguageChangedCopyWithImpl<$Res>
+    implements $AuthPreferredLanguageChangedCopyWith<$Res> {
+  _$AuthPreferredLanguageChangedCopyWithImpl(this._self, this._then);
+
+  final AuthPreferredLanguageChanged _self;
+  final $Res Function(AuthPreferredLanguageChanged) _then;
+
+/// Create a copy of AuthEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? language = null,}) {
+  return _then(AuthPreferredLanguageChanged(
+null == language ? _self.language : language // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
 
 /// @nodoc
 mixin _$AuthState {

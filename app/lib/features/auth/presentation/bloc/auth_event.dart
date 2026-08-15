@@ -9,4 +9,7 @@ sealed class AuthEvent with _$AuthEvent {
   const factory AuthEvent.loginSubmitted({required String phone}) = AuthLoginSubmitted;
 
   const factory AuthEvent.loggedOut() = AuthLoggedOut;
+
+  /// User đổi ngôn ngữ nghe (ProfilePage — Translated Call, §8).
+  const factory AuthEvent.preferredLanguageChanged(String language) = AuthPreferredLanguageChanged;
 }

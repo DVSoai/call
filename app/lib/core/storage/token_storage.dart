@@ -42,6 +42,10 @@ class TokenStorage {
 
   Future<String?> readToken() => _storage.read(key: _tokenKey);
 
+  /// Cập nhật riêng ngôn ngữ nghe (ProfilePage) — không đụng các field khác,
+  /// khác saveSession() (ghi lại toàn bộ session lúc login).
+  Future<void> writePreferredLanguage(String language) => _storage.write(key: _preferredLanguageKey, value: language);
+
   Future<String?> readUserId() => _storage.read(key: _userIdKey);
 
   /// Trả về map thông tin user đã lưu, hoặc null nếu chưa từng login

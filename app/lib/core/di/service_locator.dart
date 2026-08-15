@@ -5,6 +5,7 @@ import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/dev_login_usecase.dart';
+import '../../features/auth/domain/usecases/update_preferred_language_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/call/data/datasources/call_remote_data_source.dart';
 import '../../features/call/data/repositories/call_repository_impl.dart';
@@ -72,11 +73,13 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton(() => AuthRemoteDataSource(getIt()));
   getIt.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(getIt(), getIt()));
   getIt.registerFactory(() => DevLoginUseCase(getIt()));
+  getIt.registerFactory(() => UpdatePreferredLanguageUseCase(getIt()));
   getIt.registerLazySingleton(
     () => AuthBloc(
       devLoginUseCase: getIt(),
       authRepository: getIt(),
       sessionExpiryNotifier: getIt(),
+      updatePreferredLanguageUseCase: getIt(),
     ),
   );
 

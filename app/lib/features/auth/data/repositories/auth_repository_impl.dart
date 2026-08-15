@@ -49,5 +49,25 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, UserEntity>> updatePreferredLanguage(String language) async {
+    try {
+      await _remote.updatePreferredLanguage(language);
+      await _tokenStorage.writePreferredLanguage(language);
+      final profile = await _tokenStorage.readUserProfile();
+      if (profile == null) return const Left(Failure('Chưa đăng nhập'));
+      return Right(UserEntity(
+        id: profile['id']!,
+        phone: profile['phone']!,
+        displayName: profile['displayName']!,
+        preferredLanguage: profile['preferredLanguage']!,
+      ));
+    } on DioException catch (e) {
+      return Left(Failure(AppException.fromDioException(e).message));
+    } catch (e) {
+      return Left(Failure(e.toString()));
+    }
+  }
+
+  @override
   Future<void> logout() => _tokenStorage.clear();
 }

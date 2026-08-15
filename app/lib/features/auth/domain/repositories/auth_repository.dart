@@ -15,5 +15,10 @@ abstract class AuthRepository {
   /// chưa có endpoint GET /me).
   Future<UserEntity?> getSavedUser();
 
+  /// Đổi ngôn ngữ nghe (Translated Call, §8) — PUT /users/preferred-language
+  /// rồi cập nhật cache cục bộ, trả về UserEntity đã cập nhật để UI đồng bộ
+  /// ngay không cần load lại.
+  Future<Either<Failure, UserEntity>> updatePreferredLanguage(String language);
+
   Future<void> logout();
 }
