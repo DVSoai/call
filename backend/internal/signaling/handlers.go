@@ -95,6 +95,8 @@ func (h *Hub) handleOffer(ctx context.Context, c *Client, m Message) {
 		log.Printf("signaling: SetPendingOffer lỗi cho room %s: %v", roomID, err)
 	}
 
+	h.enrichPreferredLanguage(ctx, &m)
+
 	raw, err := json.Marshal(m)
 	if err != nil {
 		log.Printf("signaling: marshal offer lỗi: %v", err)
@@ -142,6 +144,23 @@ func (h *Hub) invitePush(ctx context.Context, callerID, calleeID, roomID, callTy
 	}
 	if err := h.push.SendCallInvite(ctx, invite); err != nil {
 		log.Printf("signaling: gửi push cho room %s lỗi: %v", roomID, err)
+	}
+}
+
+// enrichPreferredLanguage điền Payload.PreferredLanguage của người GỬI
+// (m.From) trước khi forward offer/answer cho call 1-1 — Translated Call
+// (docs/CALL_SYSTEM.md §8) cần phía nghe biết chính xác ngôn ngữ người kia
+// đang nói để ép cứng vào ASR, thay vì để Whisper tự đoán (dễ đoán sai với
+// đoạn audio ngắn). Server tự tra DB thay vì tin Client tự gửi field này —
+// tránh trường hợp Client gửi giá trị cũ/sai.
+func (h *Hub) enrichPreferredLanguage(ctx context.Context, m *Message) {
+	sender, err := h.users.GetByID(ctx, m.From)
+	if err != nil {
+		log.Printf("signaling: lấy preferredLanguage của %s lỗi: %v", m.From, err)
+		return
+	}
+	if sender != nil {
+		m.Payload.PreferredLanguage = sender.PreferredLanguage
 	}
 }
 
@@ -250,6 +269,7 @@ func (h *Hub) handleAnswer(ctx context.Context, m Message) {
 	if err := h.store.MarkConnected(ctx, m.CallID); err != nil {
 		log.Printf("signaling: MarkConnected lỗi cho room %s: %v", m.CallID, err)
 	}
+	h.enrichPreferredLanguage(ctx, &m)
 	h.forward(ctx, m)
 }
 

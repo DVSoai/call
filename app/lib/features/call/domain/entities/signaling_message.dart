@@ -42,6 +42,12 @@ class SignalingMessage extends Equatable {
   // mới hoàn toàn, không đổi field cũ nào (xem backend Payload.Mode).
   final String? mode;
 
+  // Ngôn ngữ của người GỬI offer/answer này — Server tự điền từ DB (Hub
+  // KHÔNG tin field Client tự gửi), dùng để ép cứng ASR sang đúng ngôn ngữ
+  // người kia đang nói thay vì để Whisper tự đoán (Translated Call, xem
+  // docs/CALL_SYSTEM.md §8). Chỉ đọc, Client không set field này khi gửi đi.
+  final String? preferredLanguage;
+
   const SignalingMessage({
     required this.type,
     required this.from,
@@ -51,6 +57,7 @@ class SignalingMessage extends Equatable {
     this.candidate,
     this.callType,
     this.mode,
+    this.preferredLanguage,
   });
 
   bool get isGroup => mode == 'group';
@@ -66,6 +73,7 @@ class SignalingMessage extends Equatable {
       candidate: (payload['candidate'] as Map?)?.cast<String, dynamic>(),
       callType: payload['callType'] as String?,
       mode: payload['mode'] as String?,
+      preferredLanguage: payload['preferredLanguage'] as String?,
     );
   }
 
@@ -83,5 +91,6 @@ class SignalingMessage extends Equatable {
       };
 
   @override
-  List<Object?> get props => [type, from, to, callId, sdp, candidate, callType, mode];
+  List<Object?> get props =>
+      [type, from, to, callId, sdp, candidate, callType, mode, preferredLanguage];
 }

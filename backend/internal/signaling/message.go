@@ -33,6 +33,13 @@ type Payload struct {
 	// message thêm mới hoàn toàn, không đổi field cũ nào.
 	Mode string `json:"mode,omitempty"`
 
+	// PreferredLanguage — ngôn ngữ của NGƯỜI GỬI message này (Translated
+	// Call, xem docs/CALL_SYSTEM.md §8). Hub tự điền từ DB lúc forward offer/
+	// answer (call 1-1), Client không tự set field này — để phía nghe biết
+	// chính xác ngôn ngữ người kia đang nói, ép cứng vào ASR thay vì để
+	// Whisper tự đoán (tự đoán sai rất dễ xảy ra với đoạn audio ngắn).
+	PreferredLanguage string `json:"preferredLanguage,omitempty"`
+
 	// Các field dưới đây chỉ dùng cho TypeChatMessage.
 	Text      string `json:"text,omitempty"`
 	MessageID string `json:"messageId,omitempty"` // Server sinh, echo lại cho Client match với optimistic message
