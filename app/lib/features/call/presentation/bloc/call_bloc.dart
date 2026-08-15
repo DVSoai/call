@@ -198,7 +198,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       emit(state.copyWith(status: CallStatus.connecting));
       try {
         final service = _startNewWebRtcSession();
-        await service.openLocalMedia(video: false); // v1 chỉ audio
+        await service.openLocalMedia(video: state.callType == 'video');
         final iceServers = await _fetchIceServers();
         await service.initPeerConnection(iceServers, isGroup: true);
         await _joinGroupCall(state.roomId!);
@@ -235,7 +235,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     }
   }
 
-  /// Bắt đầu 1 Group Call (SFU, audio-only v1) — tạo room qua REST rồi tự
+  /// Bắt đầu 1 Group Call (SFU) — tạo room qua REST rồi tự
   /// join luôn (người tạo cũng phải join SFU như mọi participant khác,
   /// không có gì đặc biệt hơn). Không có khái niệm "outgoingRinging chờ 1
   /// người trả lời" như 1-1 — người tạo vào thẳng connecting, người được
@@ -247,19 +247,20 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       return;
     }
 
+    final callType = event.isVideo ? 'video' : 'audio';
     emit(state.copyWith(
       status: CallStatus.connecting,
       callMode: 'group',
       participantIds: event.participantIds,
-      callType: 'audio',
+      callType: callType,
     ));
 
     try {
-      final roomId = await _createGroupCallRoom(event.participantIds, event.conversationId);
+      final roomId = await _createGroupCallRoom(event.participantIds, event.conversationId, callType);
       emit(state.copyWith(roomId: roomId));
 
       final service = _startNewWebRtcSession();
-      await service.openLocalMedia(video: false);
+      await service.openLocalMedia(video: event.isVideo);
       final iceServers = await _fetchIceServers();
       await service.initPeerConnection(iceServers, isGroup: true);
       await _joinGroupCall(roomId);
@@ -589,14 +590,14 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   /// _fetchIceServers, giữ đúng convention gọi REST của cả file này.
   /// conversationId (nếu có) giúp Server trả về room ĐANG SỐNG thay vì tạo
   /// mới, khi group đó đã có cuộc gọi diễn ra (join lại).
-  Future<String> _createGroupCallRoom(List<String> participantIds, String? conversationId) async {
+  Future<String> _createGroupCallRoom(List<String> participantIds, String? conversationId, String callType) async {
     String? roomId;
     String? error;
     await callApi<String, CreateGroupCallParams>(
       useCase: _createGroupCallUseCase,
       param: CreateGroupCallParams(
         participantIds: participantIds,
-        callType: 'audio',
+        callType: callType,
         conversationId: conversationId,
       ),
       onSuccess: (id) async => roomId = id,

@@ -352,41 +352,134 @@ class _GroupIncomingView extends StatelessWidget {
   }
 }
 
-/// Audio-only (v1) nên không cần grid video — hiện danh sách avatar những
-/// người ĐANG publish audio thật (CallBloc.groupRemoteStreams.keys), không
-/// dùng participantIds (đó là danh sách MỜI, có thể có người chưa join).
-class _GroupInCallView extends StatelessWidget {
+/// Group call — audio thì hiện danh sách avatar như trước (chỉ cần biết ai
+/// ĐANG publish, không cần renderer); video thì hiện lưới RTCVideoView, mỗi
+/// participant 1 renderer riêng, tạo/huỷ theo đúng groupRemoteStreams đang
+/// có (không dùng participantIds — đó là danh sách MỜI, có thể có người
+/// chưa join). Camera của chính mình nổi góc trên phải, giống _InCallView.
+class _GroupInCallView extends StatefulWidget {
   const _GroupInCallView({required this.state, required this.elapsedText});
 
   final CallState state;
   final String elapsedText;
 
   @override
+  State<_GroupInCallView> createState() => _GroupInCallViewState();
+}
+
+class _GroupInCallViewState extends State<_GroupInCallView> {
+  final Map<String, RTCVideoRenderer> _renderers = {};
+  final Set<String> _pendingInit = {};
+  final _localRenderer = RTCVideoRenderer();
+  bool _localReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initLocalRenderer();
+  }
+
+  Future<void> _initLocalRenderer() async {
+    await _localRenderer.initialize();
+    if (mounted) setState(() => _localReady = true);
+  }
+
+  // RTCVideoRenderer.initialize() là async — không thể tạo renderer ngay
+  // trong build(). Đánh dấu userId đang khởi tạo (_pendingInit) để tránh tạo
+  // trùng nếu build() chạy lại trước khi initialize() xong (vd. do ticker
+  // mỗi giây), rồi setState khi renderer sẵn sàng để build() lần sau vẽ
+  // được RTCVideoView cho participant đó.
+  void _ensureRenderer(String userId, MediaStream stream) {
+    final existing = _renderers[userId];
+    if (existing != null) {
+      if (existing.srcObject != stream) existing.srcObject = stream;
+      return;
+    }
+    if (_pendingInit.contains(userId)) return;
+    _pendingInit.add(userId);
+    _createRenderer(userId, stream);
+  }
+
+  Future<void> _createRenderer(String userId, MediaStream stream) async {
+    final renderer = RTCVideoRenderer();
+    await renderer.initialize();
+    renderer.srcObject = stream;
+    _pendingInit.remove(userId);
+    if (!mounted) {
+      await renderer.dispose();
+      return;
+    }
+    setState(() => _renderers[userId] = renderer);
+  }
+
+  void _pruneRenderers(Set<String> activeUserIds) {
+    final staleIds = _renderers.keys.where((id) => !activeUserIds.contains(id)).toList();
+    for (final id in staleIds) {
+      _renderers.remove(id)?.dispose();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final r in _renderers.values) {
+      r.dispose();
+    }
+    _localRenderer.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final activeUserIds = context.read<CallBloc>().groupRemoteStreams.keys.toList();
+    final bloc = context.read<CallBloc>();
+    final isVideo = widget.state.callType == 'video';
+    final streams = bloc.groupRemoteStreams;
+
+    if (isVideo) {
+      for (final entry in streams.entries) {
+        _ensureRenderer(entry.key, entry.value);
+      }
+      _pruneRenderers(streams.keys.toSet());
+      if (_localReady && _localRenderer.srcObject != bloc.localStream) {
+        _localRenderer.srcObject = bloc.localStream;
+      }
+    }
+
     return Stack(
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 24, bottom: 120, left: 24, right: 24),
           child: Column(
             children: [
-              Text(elapsedText, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(widget.elapsedText, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
               Expanded(
-                child: activeUserIds.isEmpty
+                child: streams.isEmpty
                     ? const Center(
                         child: Text('Đang chờ người khác tham gia...', style: TextStyle(color: Colors.white70)),
                       )
-                    : Wrap(
-                        spacing: 20,
-                        runSpacing: 20,
-                        alignment: WrapAlignment.center,
-                        children: activeUserIds.map((_) => const _ParticipantAvatar()).toList(),
-                      ),
+                    : isVideo
+                        ? _VideoGrid(renderers: _renderers, userIds: streams.keys.toList())
+                        : Wrap(
+                            spacing: 20,
+                            runSpacing: 20,
+                            alignment: WrapAlignment.center,
+                            children: streams.keys.map((_) => const _ParticipantAvatar()).toList(),
+                          ),
               ),
             ],
           ),
         ),
+        if (isVideo && _localReady)
+          Positioned(
+            top: 16,
+            right: 16,
+            width: 100,
+            height: 140,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: RTCVideoView(_localRenderer, mirror: true),
+            ),
+          ),
         Positioned(
           left: 0,
           right: 0,
@@ -405,15 +498,27 @@ class _GroupInCallView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     _ControlButton(
-                      icon: state.isMuted ? Icons.mic_off : Icons.mic,
+                      icon: widget.state.isMuted ? Icons.mic_off : Icons.mic,
                       onPressed: () => context.read<CallBloc>().add(const CallEvent.muteToggled()),
                     ),
                     const SizedBox(width: 16),
                     _ControlButton(
-                      icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
+                      icon: widget.state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
                       onPressed: () => _showAudioOutputPicker(context),
                     ),
                     const SizedBox(width: 16),
+                    if (isVideo)
+                      _ControlButton(
+                        icon: widget.state.isCameraOff ? Icons.videocam_off : Icons.videocam,
+                        onPressed: () => context.read<CallBloc>().add(const CallEvent.cameraToggled()),
+                      ),
+                    if (isVideo) const SizedBox(width: 16),
+                    if (isVideo)
+                      _ControlButton(
+                        icon: Icons.cameraswitch,
+                        onPressed: () => context.read<CallBloc>().add(const CallEvent.switchCameraRequested()),
+                      ),
+                    if (isVideo) const SizedBox(width: 16),
                     FloatingActionButton(
                       heroTag: 'hangup',
                       backgroundColor: Colors.red,
@@ -427,6 +532,43 @@ class _GroupInCallView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Lưới video participant — số cột tăng dần theo số người để ô video không
+/// bị quá nhỏ khi ít người (1 người: full, 2-4 người: 2 cột, >4: 3 cột).
+/// Participant chưa có renderer sẵn sàng (đang initialize() dở) hiện avatar
+/// tạm thay vì để trống.
+class _VideoGrid extends StatelessWidget {
+  const _VideoGrid({required this.renderers, required this.userIds});
+
+  final Map<String, RTCVideoRenderer> renderers;
+  final List<String> userIds;
+
+  @override
+  Widget build(BuildContext context) {
+    final crossAxisCount = userIds.length <= 1 ? 1 : (userIds.length <= 4 ? 2 : 3);
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 3 / 4,
+      ),
+      itemCount: userIds.length,
+      itemBuilder: (context, index) {
+        final renderer = renderers[userIds[index]];
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            color: Colors.white10,
+            child: renderer == null
+                ? const Center(child: _ParticipantAvatar())
+                : RTCVideoView(renderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+          ),
+        );
+      },
     );
   }
 }

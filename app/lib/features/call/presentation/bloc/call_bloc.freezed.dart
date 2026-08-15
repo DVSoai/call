@@ -168,12 +168,12 @@ return tick(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  signalingStarted,TResult Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult Function( List<String> participantIds,  String? conversationId)?  groupCallRequested,TResult Function()?  acceptRequested,TResult Function()?  rejectRequested,TResult Function()?  endRequested,TResult Function()?  muteToggled,TResult Function()?  cameraToggled,TResult Function()?  switchCameraRequested,TResult Function()?  speakerToggled,TResult Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult Function( String roomId)?  ringTimedOut,TResult Function( SignalingMessage message)?  signalingMessageReceived,TResult Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult Function( MediaStream stream)?  remoteStreamReceived,TResult Function()?  groupRemoteStreamsChanged,TResult Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult Function()?  tick,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  signalingStarted,TResult Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult Function( List<String> participantIds,  String? conversationId,  bool isVideo)?  groupCallRequested,TResult Function()?  acceptRequested,TResult Function()?  rejectRequested,TResult Function()?  endRequested,TResult Function()?  muteToggled,TResult Function()?  cameraToggled,TResult Function()?  switchCameraRequested,TResult Function()?  speakerToggled,TResult Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult Function( String roomId)?  ringTimedOut,TResult Function( SignalingMessage message)?  signalingMessageReceived,TResult Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult Function( MediaStream stream)?  remoteStreamReceived,TResult Function()?  groupRemoteStreamsChanged,TResult Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult Function()?  tick,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
 return signalingStarted();case CallOutgoingRequested() when outgoingCallRequested != null:
 return outgoingCallRequested(_that.calleeId,_that.isVideo);case CallGroupRequested() when groupCallRequested != null:
-return groupCallRequested(_that.participantIds,_that.conversationId);case CallAcceptRequested() when acceptRequested != null:
+return groupCallRequested(_that.participantIds,_that.conversationId,_that.isVideo);case CallAcceptRequested() when acceptRequested != null:
 return acceptRequested();case CallRejectRequested() when rejectRequested != null:
 return rejectRequested();case CallEndRequested() when endRequested != null:
 return endRequested();case CallMuteToggled() when muteToggled != null:
@@ -206,12 +206,12 @@ return tick();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  signalingStarted,required TResult Function( String calleeId,  bool isVideo)  outgoingCallRequested,required TResult Function( List<String> participantIds,  String? conversationId)  groupCallRequested,required TResult Function()  acceptRequested,required TResult Function()  rejectRequested,required TResult Function()  endRequested,required TResult Function()  muteToggled,required TResult Function()  cameraToggled,required TResult Function()  switchCameraRequested,required TResult Function()  speakerToggled,required TResult Function( String deviceId,  bool isSpeaker)  audioOutputSelected,required TResult Function( String roomId)  ringTimedOut,required TResult Function( SignalingMessage message)  signalingMessageReceived,required TResult Function( RTCIceCandidate candidate)  localIceCandidateGenerated,required TResult Function( MediaStream stream)  remoteStreamReceived,required TResult Function()  groupRemoteStreamsChanged,required TResult Function( RTCPeerConnectionState state)  peerConnectionStateChanged,required TResult Function()  tick,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  signalingStarted,required TResult Function( String calleeId,  bool isVideo)  outgoingCallRequested,required TResult Function( List<String> participantIds,  String? conversationId,  bool isVideo)  groupCallRequested,required TResult Function()  acceptRequested,required TResult Function()  rejectRequested,required TResult Function()  endRequested,required TResult Function()  muteToggled,required TResult Function()  cameraToggled,required TResult Function()  switchCameraRequested,required TResult Function()  speakerToggled,required TResult Function( String deviceId,  bool isSpeaker)  audioOutputSelected,required TResult Function( String roomId)  ringTimedOut,required TResult Function( SignalingMessage message)  signalingMessageReceived,required TResult Function( RTCIceCandidate candidate)  localIceCandidateGenerated,required TResult Function( MediaStream stream)  remoteStreamReceived,required TResult Function()  groupRemoteStreamsChanged,required TResult Function( RTCPeerConnectionState state)  peerConnectionStateChanged,required TResult Function()  tick,}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted():
 return signalingStarted();case CallOutgoingRequested():
 return outgoingCallRequested(_that.calleeId,_that.isVideo);case CallGroupRequested():
-return groupCallRequested(_that.participantIds,_that.conversationId);case CallAcceptRequested():
+return groupCallRequested(_that.participantIds,_that.conversationId,_that.isVideo);case CallAcceptRequested():
 return acceptRequested();case CallRejectRequested():
 return rejectRequested();case CallEndRequested():
 return endRequested();case CallMuteToggled():
@@ -240,12 +240,12 @@ return tick();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  signalingStarted,TResult? Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult? Function( List<String> participantIds,  String? conversationId)?  groupCallRequested,TResult? Function()?  acceptRequested,TResult? Function()?  rejectRequested,TResult? Function()?  endRequested,TResult? Function()?  muteToggled,TResult? Function()?  cameraToggled,TResult? Function()?  switchCameraRequested,TResult? Function()?  speakerToggled,TResult? Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult? Function( String roomId)?  ringTimedOut,TResult? Function( SignalingMessage message)?  signalingMessageReceived,TResult? Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult? Function( MediaStream stream)?  remoteStreamReceived,TResult? Function()?  groupRemoteStreamsChanged,TResult? Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult? Function()?  tick,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  signalingStarted,TResult? Function( String calleeId,  bool isVideo)?  outgoingCallRequested,TResult? Function( List<String> participantIds,  String? conversationId,  bool isVideo)?  groupCallRequested,TResult? Function()?  acceptRequested,TResult? Function()?  rejectRequested,TResult? Function()?  endRequested,TResult? Function()?  muteToggled,TResult? Function()?  cameraToggled,TResult? Function()?  switchCameraRequested,TResult? Function()?  speakerToggled,TResult? Function( String deviceId,  bool isSpeaker)?  audioOutputSelected,TResult? Function( String roomId)?  ringTimedOut,TResult? Function( SignalingMessage message)?  signalingMessageReceived,TResult? Function( RTCIceCandidate candidate)?  localIceCandidateGenerated,TResult? Function( MediaStream stream)?  remoteStreamReceived,TResult? Function()?  groupRemoteStreamsChanged,TResult? Function( RTCPeerConnectionState state)?  peerConnectionStateChanged,TResult? Function()?  tick,}) {final _that = this;
 switch (_that) {
 case CallSignalingStarted() when signalingStarted != null:
 return signalingStarted();case CallOutgoingRequested() when outgoingCallRequested != null:
 return outgoingCallRequested(_that.calleeId,_that.isVideo);case CallGroupRequested() when groupCallRequested != null:
-return groupCallRequested(_that.participantIds,_that.conversationId);case CallAcceptRequested() when acceptRequested != null:
+return groupCallRequested(_that.participantIds,_that.conversationId,_that.isVideo);case CallAcceptRequested() when acceptRequested != null:
 return acceptRequested();case CallRejectRequested() when rejectRequested != null:
 return rejectRequested();case CallEndRequested() when endRequested != null:
 return endRequested();case CallMuteToggled() when muteToggled != null:
@@ -372,7 +372,7 @@ as bool,
 
 
 class CallGroupRequested implements CallEvent {
-  const CallGroupRequested({required  List<String> participantIds, this.conversationId}): _participantIds = participantIds;
+  const CallGroupRequested({required  List<String> participantIds, this.conversationId, this.isVideo = false}): _participantIds = participantIds;
   
 
  final  List<String> _participantIds;
@@ -383,6 +383,7 @@ class CallGroupRequested implements CallEvent {
 }
 
  final  String? conversationId;
+@JsonKey() final  bool isVideo;
 
 /// Create a copy of CallEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -394,16 +395,16 @@ $CallGroupRequestedCopyWith<CallGroupRequested> get copyWith => _$CallGroupReque
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallGroupRequested&&const DeepCollectionEquality().equals(other._participantIds, _participantIds)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallGroupRequested&&const DeepCollectionEquality().equals(other._participantIds, _participantIds)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.isVideo, isVideo) || other.isVideo == isVideo));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_participantIds),conversationId);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_participantIds),conversationId,isVideo);
 
 @override
 String toString() {
-  return 'CallEvent.groupCallRequested(participantIds: $participantIds, conversationId: $conversationId)';
+  return 'CallEvent.groupCallRequested(participantIds: $participantIds, conversationId: $conversationId, isVideo: $isVideo)';
 }
 
 
@@ -414,7 +415,7 @@ abstract mixin class $CallGroupRequestedCopyWith<$Res> implements $CallEventCopy
   factory $CallGroupRequestedCopyWith(CallGroupRequested value, $Res Function(CallGroupRequested) _then) = _$CallGroupRequestedCopyWithImpl;
 @useResult
 $Res call({
- List<String> participantIds, String? conversationId
+ List<String> participantIds, String? conversationId, bool isVideo
 });
 
 
@@ -431,11 +432,12 @@ class _$CallGroupRequestedCopyWithImpl<$Res>
 
 /// Create a copy of CallEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? participantIds = null,Object? conversationId = freezed,}) {
+@pragma('vm:prefer-inline') $Res call({Object? participantIds = null,Object? conversationId = freezed,Object? isVideo = null,}) {
   return _then(CallGroupRequested(
 participantIds: null == participantIds ? _self._participantIds : participantIds // ignore: cast_nullable_to_non_nullable
 as List<String>,conversationId: freezed == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,isVideo: null == isVideo ? _self.isVideo : isVideo // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

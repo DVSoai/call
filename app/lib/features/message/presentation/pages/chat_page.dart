@@ -96,14 +96,21 @@ class _ChatPageState extends State<ChatPage> {
             : groupParticipantIds.isEmpty
                 ? null
                 : [
-                    // v1 Group Call chỉ audio (xem docs/CALL_SYSTEM.md §7) —
-                    // chưa có nút gọi video nhóm.
                     IconButton(
                       tooltip: 'Gọi nhóm',
                       icon: const Icon(Icons.call_outlined),
                       onPressed: () => context.read<CallBloc>().add(CallEvent.groupCallRequested(
                             participantIds: groupParticipantIds,
                             conversationId: widget.conversationId,
+                          )),
+                    ),
+                    IconButton(
+                      tooltip: 'Gọi video nhóm',
+                      icon: const Icon(Icons.videocam_outlined),
+                      onPressed: () => context.read<CallBloc>().add(CallEvent.groupCallRequested(
+                            participantIds: groupParticipantIds,
+                            conversationId: widget.conversationId,
+                            isVideo: true,
                           )),
                     ),
                   ],
