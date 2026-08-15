@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pion/webrtc/v4"
 
 	"callserver/internal/calls"
 	"callserver/internal/db"
 	"callserver/internal/push"
+	"callserver/internal/sfu"
 )
 
 // redisOpTimeout giới hạn thời gian chờ Redis/Postgres trong đường đi
@@ -33,6 +35,10 @@ type Hub struct {
 	messages      *db.MessageRepo
 	push          push.Dispatcher
 
+	// sfuManager quản lý toàn bộ Group Call room (SFU, xem internal/sfu) —
+	// call 1-1 (ModeDirect) không chạm vào field này.
+	sfuManager *sfu.Manager
+
 	instanceID string
 }
 
@@ -45,8 +51,9 @@ func NewHub(
 	messages *db.MessageRepo,
 	dispatcher push.Dispatcher,
 	instanceID string,
+	sfuICEServers []webrtc.ICEServer,
 ) *Hub {
-	return &Hub{
+	h := &Hub{
 		clients:       make(map[string]*Client),
 		store:         store,
 		users:         users,
@@ -57,6 +64,61 @@ func NewHub(
 		push:          dispatcher,
 		instanceID:    instanceID,
 	}
+	// Callback dùng lại route()/deliverLocal() đã có — sfu package không tự
+	// gửi WS, chỉ báo lại "cần gửi offer/candidate này cho user X".
+	h.sfuManager = sfu.NewManager(sfuICEServers, h.sendSFUOffer, h.sendSFUICECandidate)
+	return h
+}
+
+// sendSFUOffer/sendSFUICECandidate là 2 callback truyền cho sfu.Manager lúc
+// tạo — internal/sfu không biết gì về Message/WebSocket, chỉ gọi lại đây
+// mỗi khi cần đẩy offer/ICE candidate mới xuống 1 user trong group room.
+func (h *Hub) sendSFUOffer(ctx context.Context, roomID, userID, sdp string) {
+	raw, err := json.Marshal(Message{
+		Type: TypeOffer, From: "server", To: userID, CallID: roomID,
+		Payload: Payload{SDP: sdp, Mode: calls.ModeGroup},
+	})
+	if err != nil {
+		log.Printf("signaling: marshal sfu offer lỗi: %v", err)
+		return
+	}
+	h.route(ctx, userID, raw)
+}
+
+func (h *Hub) sendSFUICECandidate(ctx context.Context, roomID, userID string, candidate map[string]any) {
+	candidateJSON, err := json.Marshal(candidate)
+	if err != nil {
+		log.Printf("signaling: marshal sfu ice candidate lỗi: %v", err)
+		return
+	}
+	raw, err := json.Marshal(Message{
+		Type: TypeICECandidate, From: "server", To: userID, CallID: roomID,
+		Payload: Payload{Candidate: candidateJSON, Mode: calls.ModeGroup},
+	})
+	if err != nil {
+		log.Printf("signaling: marshal sfu ice candidate message lỗi: %v", err)
+		return
+	}
+	h.route(ctx, userID, raw)
+}
+
+// JoinGroupCall tạo 1 SFU Peer cho user trong room — gọi từ REST handler
+// POST /calls/:roomId/join (xem internal/api/handlers_calls.go).
+func (h *Hub) JoinGroupCall(ctx context.Context, roomID, userID string) error {
+	if err := h.sfuManager.Join(ctx, roomID, userID); err != nil {
+		return err
+	}
+	// Đánh dấu trên Client để unregister() dọn được SFU Peer nếu WS ngắt
+	// giữa chừng — user phải đang có WS sống mới join được (REST handler
+	// yêu cầu JWT hợp lệ nhưng không bắt buộc WS; nếu user gọi join REST
+	// mà không có WS local trên instance này, bỏ qua bước đánh dấu, chấp
+	// nhận dọn trễ qua PeerConnectionStateFailed).
+	h.mu.Lock()
+	if c, ok := h.clients[userID]; ok {
+		c.groupRoomID = roomID
+	}
+	h.mu.Unlock()
+	return nil
 }
 
 // Run subscribe channel Pub/Sub riêng của instance này, forward message
@@ -160,6 +222,7 @@ func (h *Hub) unregister(c *Client) {
 	// — tránh trường hợp connection cũ unregister muộn, xoá nhầm connection
 	// mới hơn vừa đăng ký.
 	stillCurrent := h.clients[c.userID] == c
+	groupRoomID := c.groupRoomID
 	if stillCurrent {
 		delete(h.clients, c.userID)
 	}
@@ -168,6 +231,13 @@ func (h *Hub) unregister(c *Client) {
 	if !stillCurrent {
 		return
 	}
+	// Dọn SFU Peer nếu user đang ở giữa 1 Group Call — không đợi ICE timeout
+	// tự phát hiện PeerConnectionStateFailed (có độ trễ), disconnect WS là
+	// tín hiệu chắc chắn hơn để dọn ngay.
+	if groupRoomID != "" {
+		h.sfuManager.Leave(groupRoomID, c.userID)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), redisOpTimeout)
 	defer cancel()
 	if err := h.store.SetOffline(ctx, c.userID); err != nil {

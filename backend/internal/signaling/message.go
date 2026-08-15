@@ -27,6 +27,12 @@ type Payload struct {
 	Candidate json.RawMessage `json:"candidate,omitempty"`
 	CallType  string          `json:"callType,omitempty"`
 
+	// Mode — "group" cho Group Call (SFU, xem docs/CALL_SYSTEM.md §7),
+	// trống/"direct" cho call 1-1 như cũ. Chỉ set ở message đầu tiên (lời
+	// mời) để Client biết cần vào luồng group thay vì P2P thông thường —
+	// message thêm mới hoàn toàn, không đổi field cũ nào.
+	Mode string `json:"mode,omitempty"`
+
 	// Các field dưới đây chỉ dùng cho TypeChatMessage.
 	Text      string `json:"text,omitempty"`
 	MessageID string `json:"messageId,omitempty"` // Server sinh, echo lại cho Client match với optimistic message

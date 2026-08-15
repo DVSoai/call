@@ -107,38 +107,94 @@ func (h *Hub) handleOffer(ctx context.Context, c *Client, m Message) {
 }
 
 func (h *Hub) dispatchInvitePush(ctx context.Context, m Message, callType string) {
-	caller, err := h.users.GetByID(ctx, m.From)
+	h.invitePush(ctx, m.From, m.To, m.CallID, callType)
+}
+
+// invitePush gửi push đánh thức 1 callee cụ thể — tách riêng khỏi
+// dispatchInvitePush (1-1, đúng 1 callee) để InviteGroupParticipants (group,
+// N người) dùng lại được, không lặp code.
+func (h *Hub) invitePush(ctx context.Context, callerID, calleeID, roomID, callType string) {
+	caller, err := h.users.GetByID(ctx, callerID)
 	if err != nil {
-		log.Printf("signaling: lấy thông tin caller %s lỗi: %v", m.From, err)
+		log.Printf("signaling: lấy thông tin caller %s lỗi: %v", callerID, err)
 		return
 	}
-	tokens, err := h.devices.TokensForUser(ctx, m.To)
+	tokens, err := h.devices.TokensForUser(ctx, calleeID)
 	if err != nil {
-		log.Printf("signaling: lấy device token của %s lỗi: %v", m.To, err)
+		log.Printf("signaling: lấy device token của %s lỗi: %v", calleeID, err)
 		return
 	}
 	if len(tokens) == 0 {
-		log.Printf("signaling: user %s offline và không có device token để push", m.To)
+		log.Printf("signaling: user %s offline và không có device token để push", calleeID)
 		return
 	}
-	callerName := m.From
+	callerName := callerID
 	if caller != nil && caller.DisplayName != "" {
 		callerName = caller.DisplayName
 	}
 	invite := push.CallInvite{
-		RoomID:       m.CallID,
-		CallerID:     m.From,
+		RoomID:       roomID,
+		CallerID:     callerID,
 		CallerName:   callerName,
 		CallType:     callType,
 		DeviceTokens: tokens,
 	}
 	if err := h.push.SendCallInvite(ctx, invite); err != nil {
-		log.Printf("signaling: gửi push cho room %s lỗi: %v", m.CallID, err)
+		log.Printf("signaling: gửi push cho room %s lỗi: %v", roomID, err)
 	}
 }
 
-// handleAnswer chuyển room sang CONNECTED rồi forward answer tới caller.
+// InviteGroupParticipants mời từng participant vào 1 group room — dùng bởi
+// REST handler POST /calls/group. Lời mời chưa có SDP (group chưa có gì để
+// offer tới khi chưa ai join SFU) — Payload.Mode="group" để Client phân
+// biệt với offer 1-1 thật, chỉ hiện Incoming UI, KHÔNG dùng làm
+// pendingRemoteOfferSdp (xem CallBloc._handleIncomingOffer).
+func (h *Hub) InviteGroupParticipants(ctx context.Context, room calls.RoomState, callerID string) {
+	for _, uid := range room.Participants {
+		if uid == callerID {
+			continue
+		}
+		m := Message{
+			Type:   TypeOffer,
+			From:   callerID,
+			To:     uid,
+			CallID: room.RoomID,
+			Payload: Payload{
+				CallType: room.CallType,
+				Mode:     calls.ModeGroup,
+			},
+		}
+		raw, err := json.Marshal(m)
+		if err != nil {
+			log.Printf("signaling: marshal group invite lỗi: %v", err)
+			continue
+		}
+		if h.route(ctx, uid, raw) {
+			continue
+		}
+		h.invitePush(ctx, callerID, uid, room.RoomID, room.CallType)
+	}
+}
+
+// handleAnswer: 2 nhánh tuỳ Mode của room.
+//   - ModeGroup: answer này là trả lời cho offer SFU gửi xuống (đầu tiên
+//     hoặc renegotiate) — áp vào đúng Peer của user đó trong internal/sfu,
+//     KHÔNG forward đi đâu (chỉ có 2 bên Client<->Server, không có "phía
+//     kia" để forward tới).
+//   - Mặc định (ModeDirect, luồng 1-1 cũ): giữ nguyên y hệt — chuyển room
+//     sang CONNECTED rồi forward answer tới caller.
 func (h *Hub) handleAnswer(ctx context.Context, m Message) {
+	room, err := h.store.Get(ctx, m.CallID)
+	if err != nil {
+		log.Printf("signaling: đọc room %s lỗi lúc handleAnswer: %v", m.CallID, err)
+	}
+	if room != nil && room.IsGroup() {
+		if err := h.sfuManager.SetAnswer(m.CallID, m.From, m.Payload.SDP); err != nil {
+			log.Printf("signaling: sfu SetAnswer lỗi cho user %s room %s: %v", m.From, m.CallID, err)
+		}
+		return
+	}
+
 	// m.From là callee (người vừa answer) — offer không còn cần redeliver nữa.
 	if err := h.store.ClearPendingOffer(ctx, m.From); err != nil {
 		log.Printf("signaling: ClearPendingOffer lỗi cho user %s: %v", m.From, err)
@@ -149,9 +205,25 @@ func (h *Hub) handleAnswer(ctx context.Context, m Message) {
 	h.forward(ctx, m)
 }
 
-// handleICECandidate chỉ forward — không chạm state, có thể đến nhiều lần
-// trong lúc 2 Client đang trao đổi ICE candidate.
+// handleICECandidate: ModeGroup áp thẳng vào Peer trong internal/sfu (2 bên
+// Client<->Server, không có "phía kia" để forward); mặc định (1-1) giữ
+// nguyên hành vi cũ — chỉ forward, không chạm state.
 func (h *Hub) handleICECandidate(ctx context.Context, m Message) {
+	room, err := h.store.Get(ctx, m.CallID)
+	if err != nil {
+		log.Printf("signaling: đọc room %s lỗi lúc handleICECandidate: %v", m.CallID, err)
+	}
+	if room != nil && room.IsGroup() {
+		var candidate map[string]any
+		if err := json.Unmarshal(m.Payload.Candidate, &candidate); err != nil {
+			log.Printf("signaling: parse ice candidate (group) lỗi: %v", err)
+			return
+		}
+		if err := h.sfuManager.AddICECandidate(m.CallID, m.From, candidate); err != nil {
+			log.Printf("signaling: sfu AddICECandidate lỗi cho user %s room %s: %v", m.From, m.CallID, err)
+		}
+		return
+	}
 	h.forward(ctx, m)
 }
 

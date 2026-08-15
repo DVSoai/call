@@ -24,6 +24,11 @@ type Client struct {
 	userID string
 	conn   *websocket.Conn
 	send   chan []byte
+
+	// groupRoomID — roomID Group Call user này đang tham gia (rỗng nếu
+	// không), CHỈ đọc/ghi khi giữ Hub.mu (xem JoinGroupCall/unregister) —
+	// dùng để dọn SFU Peer khi WS ngắt kết nối giữa chừng.
+	groupRoomID string
 }
 
 func newClient(hub *Hub, userID string, conn *websocket.Conn) *Client {

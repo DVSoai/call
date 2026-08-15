@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pion/webrtc/v4"
 
 	"callserver/internal/api"
 	"callserver/internal/auth"
@@ -87,9 +88,6 @@ func main() {
 		log.Println("callserver: dùng LogDispatcher (FIREBASE_CREDENTIALS_PATH trống) — push chỉ log ra console")
 	}
 
-	hub := signaling.NewHub(store, userRepo, deviceRepo, historyRepo, conversationRepo, messageRepo, dispatcher, cfg.InstanceID)
-	go hub.Run(ctx)
-
 	authSvc := service.NewAuthService(userRepo, authManager)
 	userSvc := service.NewUserService(userRepo)
 	deviceSvc := service.NewDeviceService(deviceRepo)
@@ -97,6 +95,17 @@ func main() {
 	contactSvc := service.NewContactService(contactRepo)
 	conversationSvc := service.NewConversationService(contactRepo, conversationRepo, messageRepo)
 	turnSvc := service.NewTurnService(cfg.TURNSecret, cfg.TURNRealm, cfg.TURNURLs)
+
+	// PeerConnection phía Server (internal/sfu) cũng cần ICE server như
+	// Client — dùng lại đúng cơ chế credential time-limited (TurnService),
+	// sinh 1 lần lúc khởi động dưới danh nghĩa "sfu-server".
+	sfuTurnCreds := turnSvc.GenerateCredentials("sfu-server")
+	sfuICEServers := []webrtc.ICEServer{
+		{URLs: sfuTurnCreds.URLs, Username: sfuTurnCreds.Username, Credential: sfuTurnCreds.Password},
+	}
+
+	hub := signaling.NewHub(store, userRepo, deviceRepo, historyRepo, conversationRepo, messageRepo, dispatcher, cfg.InstanceID, sfuICEServers)
+	go hub.Run(ctx)
 
 	router := api.NewRouter(authManager, hub, authSvc, userSvc, deviceSvc, historySvc, contactSvc, conversationSvc, turnSvc)
 

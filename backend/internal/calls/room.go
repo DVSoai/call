@@ -26,6 +26,15 @@ const (
 // theo participants []string ngay từ đầu (room-ready) — call 1-1 luôn có
 // đúng 2 phần tử, Group Call sau này chỉ cần thêm participant vào slice
 // này, không cần đổi cấu trúc dữ liệu.
+// ModeDirect/ModeGroup phân biệt call 1-1 (P2P, Server chỉ forward SDP) với
+// Group Call (SFU, Server thật sự tham gia media) — xem docs/CALL_SYSTEM.md
+// §7. Cùng convention đặt tên với Conversation.Type ("direct"/"group") đã
+// dùng cho messaging.
+const (
+	ModeDirect = "direct"
+	ModeGroup  = "group"
+)
+
 type RoomState struct {
 	RoomID       string    `json:"roomId"`
 	CallType     string    `json:"callType"` // "audio" | "video"
@@ -34,11 +43,22 @@ type RoomState struct {
 	Participants []string  `json:"participants"`
 	CreatedAt    time.Time `json:"createdAt"`
 
+	// Mode mặc định "" tương đương ModeDirect (room cũ/1-1 không set field
+	// này) — chỉ ModeGroup mới route qua internal/sfu, mọi thứ khác giữ
+	// nguyên hành vi cũ.
+	Mode string `json:"mode,omitempty"`
+
 	// OfferSDP lưu lại offer gốc — cần thiết để redeliver cho callee lúc
 	// reconnect sau khi bị đánh thức qua Push (app background/bị kill),
 	// vì offer chỉ được forward sống 1 lần lúc gọi tới (xem §5.2 CALL_SYSTEM.md).
+	// Không dùng cho ModeGroup (SFU tự renegotiate lại khi callee reconnect,
+	// không cần redeliver offer cũ).
 	OfferSDP string `json:"offerSdp,omitempty"`
 }
+
+// IsGroup trả về true nếu room này là Group Call (SFU) — helper tránh so
+// sánh string rải rác khắp handlers.go.
+func (r RoomState) IsGroup() bool { return r.Mode == ModeGroup }
 
 func roomKey(roomID string) string {
 	return "call:" + roomID
