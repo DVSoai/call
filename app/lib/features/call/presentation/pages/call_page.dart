@@ -391,26 +391,39 @@ class _GroupInCallView extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 32,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _ControlButton(
-                icon: state.isMuted ? Icons.mic_off : Icons.mic,
-                onPressed: () => context.read<CallBloc>().add(const CallEvent.muteToggled()),
+          // LayoutBuilder lấy đúng width thật đang có — dùng làm minWidth để
+          // Row vẫn canh giữa bình thường khi đủ chỗ (giống trước), nhưng
+          // bọc SingleChildScrollView để KHÔNG BAO GIỜ tràn cứng
+          // (RenderFlex overflow) nếu màn hình/emulator hẹp bất thường —
+          // lúc đó cho cuộn ngang thay vì crash.
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _ControlButton(
+                      icon: state.isMuted ? Icons.mic_off : Icons.mic,
+                      onPressed: () => context.read<CallBloc>().add(const CallEvent.muteToggled()),
+                    ),
+                    const SizedBox(width: 16),
+                    _ControlButton(
+                      icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
+                      onPressed: () => _showAudioOutputPicker(context),
+                    ),
+                    const SizedBox(width: 16),
+                    FloatingActionButton(
+                      heroTag: 'hangup',
+                      backgroundColor: Colors.red,
+                      onPressed: () => context.read<CallBloc>().add(const CallEvent.endRequested()),
+                      child: const Icon(Icons.call_end),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 16),
-              _ControlButton(
-                icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
-                onPressed: () => _showAudioOutputPicker(context),
-              ),
-              const SizedBox(width: 16),
-              FloatingActionButton(
-                heroTag: 'hangup',
-                backgroundColor: Colors.red,
-                onPressed: () => context.read<CallBloc>().add(const CallEvent.endRequested()),
-                child: const Icon(Icons.call_end),
-              ),
-            ],
+            ),
           ),
         ),
       ],
@@ -476,38 +489,49 @@ class _InCallView extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 32,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _ControlButton(
-                icon: state.isMuted ? Icons.mic_off : Icons.mic,
-                onPressed: () => context.read<CallBloc>().add(const CallEvent.muteToggled()),
-              ),
-              const SizedBox(width: 16),
-              _ControlButton(
-                icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
-                onPressed: () => _showAudioOutputPicker(context),
-              ),
-              const SizedBox(width: 16),
-              if (isVideo)
-                _ControlButton(
-                  icon: state.isCameraOff ? Icons.videocam_off : Icons.videocam,
-                  onPressed: () => context.read<CallBloc>().add(const CallEvent.cameraToggled()),
+          // Xem _GroupInCallView — cùng lý do bọc LayoutBuilder +
+          // SingleChildScrollView: canh giữa bình thường khi đủ chỗ, không
+          // bao giờ tràn cứng khi màn hình hẹp (video call có tới 5 nút).
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _ControlButton(
+                      icon: state.isMuted ? Icons.mic_off : Icons.mic,
+                      onPressed: () => context.read<CallBloc>().add(const CallEvent.muteToggled()),
+                    ),
+                    const SizedBox(width: 16),
+                    _ControlButton(
+                      icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
+                      onPressed: () => _showAudioOutputPicker(context),
+                    ),
+                    const SizedBox(width: 16),
+                    if (isVideo)
+                      _ControlButton(
+                        icon: state.isCameraOff ? Icons.videocam_off : Icons.videocam,
+                        onPressed: () => context.read<CallBloc>().add(const CallEvent.cameraToggled()),
+                      ),
+                    if (isVideo) const SizedBox(width: 16),
+                    if (isVideo)
+                      _ControlButton(
+                        icon: Icons.cameraswitch,
+                        onPressed: () => context.read<CallBloc>().add(const CallEvent.switchCameraRequested()),
+                      ),
+                    if (isVideo) const SizedBox(width: 16),
+                    FloatingActionButton(
+                      heroTag: 'hangup',
+                      backgroundColor: Colors.red,
+                      onPressed: () => context.read<CallBloc>().add(const CallEvent.endRequested()),
+                      child: const Icon(Icons.call_end),
+                    ),
+                  ],
                 ),
-              if (isVideo) const SizedBox(width: 16),
-              if (isVideo)
-                _ControlButton(
-                  icon: Icons.cameraswitch,
-                  onPressed: () => context.read<CallBloc>().add(const CallEvent.switchCameraRequested()),
-                ),
-              if (isVideo) const SizedBox(width: 16),
-              FloatingActionButton(
-                heroTag: 'hangup',
-                backgroundColor: Colors.red,
-                onPressed: () => context.read<CallBloc>().add(const CallEvent.endRequested()),
-                child: const Icon(Icons.call_end),
               ),
-            ],
+            ),
           ),
         ),
       ],
