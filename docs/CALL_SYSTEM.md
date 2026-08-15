@@ -75,7 +75,7 @@ Hệ thống Call gồm hai phía tách biệt rõ trách nhiệm:
 | WebSocket signaling | `gorilla/websocket` | ✅ Đã code |
 | WebRTC (nếu cần SFU sau này) | `pion/webrtc` | Chưa cần — để dành chương 7 (Group Call) |
 | TURN/STUN server tự host | `coturn` (Docker) | ✅ Đã cấu hình (docker-compose) |
-| Push notification — Android | `firebase.google.com/go/v4/messaging` | Chưa nối thật — đang dùng `LogDispatcher` |
+| Push notification — Android | `firebase.google.com/go/v4/messaging` | ✅ Đã nối thật (`FCMDispatcher`) |
 | Push notification — iOS VoIP | `sideshow/apns2` | Chưa nối thật — cần Apple Developer Program |
 | HTTP API framework | `gin-gonic/gin` | ✅ Đã code |
 | Xác thực | `golang-jwt/jwt` | ✅ Đã code |
@@ -176,7 +176,9 @@ Khi Client B không có kết nối WebSocket sống (app background/bị kill),
 
 > **Lưu ý bắt buộc:** Với iOS, mọi VoIP Push nhận qua PushKit đều buộc phải trigger `CXProvider.reportNewIncomingCall` ngay lập tức phía Client, nếu không Apple có thể terminate app. Đây là ràng buộc của Apple, Server chỉ cần đảm bảo gửi đúng loại VoIP Push (không phải push thông thường).
 
-> **Trạng thái hiện tại trong code:** Reference implementation đang dùng interface `Dispatcher` với `LogDispatcher` (chỉ log ra console, chưa gọi FCM/APNs thật) — vì cần tài khoản Firebase (free) và Apple Developer Program ($99/năm, bắt buộc để test CallKit thật trên iPhone). Khi sẵn sàng, chỉ cần viết thêm 1 implementation mới cho interface `Dispatcher`, không phải sửa Hub hay bất kỳ module nào khác.
+> **Trạng thái hiện tại trong code:** Interface `Dispatcher` có 2 implementation — `LogDispatcher` (chỉ log ra console, dùng khi chưa cấu hình Firebase) và `FCMDispatcher` (gửi push Android thật qua `firebase.google.com/go/v4/messaging`, **đã nối thật**, chọn qua biến môi trường `FIREBASE_CREDENTIALS_PATH` — xem `cmd/server/main.go`). iOS vẫn chưa làm (`apns2`) vì cần Apple Developer Program ($99/năm, bắt buộc để test CallKit thật trên iPhone). Khi sẵn sàng, chỉ cần viết thêm 1 implementation mới cho interface `Dispatcher`, không phải sửa Hub hay bất kỳ module nào khác.
+>
+> **Vấn đề "offer bị mất" khi callee được đánh thức qua Push (đã vá):** offer chỉ được forward SỐNG 1 lần lúc gọi tới (`route()`); nếu callee lúc đó không có WS nào, offer đó "biến mất" — khi app mở lại (do bấm Accept trên CallKit) sẽ không còn gì để answer. Server giờ lưu lại `OfferSDP` trong `RoomState` (Redis) + đánh dấu `pending_offer:{calleeUserID}` lúc tạo room RINGING; khi callee connect lại (`Hub.register()`), tự động redeliver offer đó qua WS như thể vừa nhận trực tiếp — xem `calls.Store.SetPendingOffer/GetPendingOffer/ClearPendingOffer` và `Hub.redeliverPendingOffer`.
 
 ### 4.4. STUN/TURN
 
@@ -195,6 +197,7 @@ Credential TURN được cấp theo cơ chế shared-secret chuẩn của coturn
 | `PUT /users/preferred-language` | Cập nhật ngôn ngữ nghe ưu tiên — chuẩn bị sẵn cho chương 8 (Translated Call) |
 | `POST /devices/register-push-token` | Lưu FCM token / APNs VoIP token của thiết bị |
 | `GET /calls/history` | Lấy lịch sử cuộc gọi |
+| `POST /calls/:roomId/reject` | Fallback REST cho reject khi Client không có WS sống để tự gửi `call-reject` — dùng khi app bị kill hẳn và user bấm Decline ngay trên màn hình CallKit, quyết định đến từ code native Android ngoài Flutter engine (xem §5.2b) |
 | `GET /turn-credentials` | Cấp credential tạm thời (time-limited) để Client kết nối TURN server |
 | `GET /ws` | Nâng cấp lên WebSocket, điểm vào của Signaling Hub |
 
@@ -207,7 +210,7 @@ internal/db/                — PostgreSQL: connection, schema migration, reposi
 internal/calls/             — Redis: presence + call state (RINGING/CONNECTED, TTL tự hết hạn)
 internal/signaling/         — WebSocket Hub: message schema, client, routing, cross-instance pub/sub
 internal/auth/              — JWT sinh/verify
-internal/push/              — interface gửi Push, LogDispatcher cho giai đoạn test
+internal/push/              — interface gửi Push, LogDispatcher (test) + FCMDispatcher (Android, đã nối thật)
 internal/api/                — REST handlers + WebSocket upgrade + TURN credential
 coturn/turnserver.conf       — cấu hình TURN server cho giai đoạn test
 docker-compose.yml           — Postgres + Redis + coturn, chạy local 1 lệnh
@@ -242,21 +245,65 @@ Client A (Flutter)         Server (Golang)              Client B (Flutter)
       │◄═══════════ Media P2P (WebRTC) — không qua Server ═════►│
 ```
 
-### 5.2. Incoming Call — App background/bị kill (cần Push)
+### 5.2. Incoming Call — App bị kill hẳn (cần Push + redeliver offer)
+
+Đã có reference implementation chạy được thật cho nhánh Android (xem `app/lib/core/push/`,
+`backend/internal/push/fcm_dispatcher.go`). iOS chưa làm (thiếu Apple Developer Program).
 
 ```
 Client A          Server (Golang)                         Client B
    │                    │                                     │
    │──WS: offer────────►│                                     │
+   │                    │  lưu OfferSDP vào RoomState (Redis)
+   │                    │  đánh dấu pending_offer:{userB}
    │                    │  Client B không có WS sống          │
-   │                    │──FCM/APNs VoIP Push─────────────────►│
-   │                    │                          PushKit/FCM đánh thức app
-   │                    │                          CallKit hiện System Call UI
-   │                    │◄────WS: (app mở lại) connect─────────│
+   │                    │──FCM (Android, đã nối thật)─────────►│
+   │                    │                          FCM background handler chạy
+   │                    │                          (dù app đã kill hẳn)
+   │                    │                          → showCallkitIncoming()
+   │                    │                          → hiện Incoming Call UI kiểu native
+   │                    │◄────WS: (bấm Accept, app mở lại,     │
+   │                    │         resume + reconnect) connect──│
+   │                    │──redeliver offer đã lưu (WS)─────────►│  (Hub.register(), xem
+   │                    │                                         Hub.redeliverPendingOffer)
+   │                    │                          CallBloc nhận offer, đã được đánh dấu
+   │                    │                          auto-accept (PushService.markAutoAccept)
+   │                    │                          → tự accept, không hỏi lại user
    │                    │◄────WS: answer(sdp)──────────────────│
    │◄───WS: answer──────│                                      │
    │◄═══════ Media P2P (WebRTC) ═══════════════════════════════►│
 ```
+
+### 5.2b. Decline khi app bị kill hẳn — fallback native (không qua Flutter engine)
+
+Nếu user bấm Decline ngay trên màn hình CallKit lúc app đã kill hẳn, plugin
+`flutter_callkit_incoming` xử lý nút đó **hoàn toàn bằng native** (đóng notification), không mở
+lại app — nghĩa là không có Dart nào chạy để gửi `call-reject` qua WebSocket. Nếu bỏ qua, Client A
+sẽ đứng đợi tới khi room RINGING tự hết hạn TTL (30s) mới coi là missed thay vì rejected ngay.
+
+Xử lý: đăng ký `CallRejectNativeHandler` (Kotlin, implement `CallkitEventCallback` — hook có sẵn
+của plugin, chạy được kể cả khi Flutter engine chưa khởi động) ở `CallVideoApplication.onCreate()`
+— khi nhận sự kiện DECLINE, gọi thẳng `POST /calls/:roomId/reject` (REST, không cần WS) bằng
+`HttpURLConnection`, đọc JWT token từ `NativeAuthBridge` (bản sao token riêng cho native, lưu qua
+`EncryptedSharedPreferences`, Dart ghi vào lúc login/logout qua MethodChannel — xem
+`app/lib/core/push/native_auth_bridge.dart`).
+
+```
+Client B (native, Flutter engine CHƯA chạy)         Server
+   │  user bấm Decline trên CallKit UI                  │
+   │  CallkitEventCallback.onCallEvent(DECLINE)          │
+   │──HTTP POST /calls/:roomId/reject (JWT từ native)───►│
+   │                                          Hub.RejectCall() — giống hệt
+   │                                          handleCallReject qua WS, chỉ
+   │                                          khác nguồn gọi (REST thay vì WS)
+   │                                          forward call-reject cho Client A
+```
+
+> Nếu app CHỈ bị thu nhỏ (không kill) — process/WS vẫn sống, offer tới thẳng qua WS như §5.1 bình
+> thường. CallBloc tự chủ động gọi `showCallkitIncoming()` khi thấy `incomingRinging` mà app không
+> ở foreground (xem `PushService._showIncomingCallUIFromLiveState`), và Decline trong trường hợp
+> này đi qua `CallBloc.rejectIfMatching()` (Dart, có WS) — chỉ trường hợp app kill hẳn mới cần
+> nhánh native ở trên.
 
 ---
 
@@ -268,8 +315,10 @@ Client A          Server (Golang)                         Client B
 | Signaling transport | `web_socket_channel` | ✅ `gorilla/websocket` |
 | Định tuyến SDP/ICE | — | ✅ |
 | Call state (nguồn sự thật) | hiển thị | ✅ Redis |
-| Push khi app đóng | nhận (`firebase_messaging`/PushKit) | ✅ gửi (`apns2`, FCM Go SDK) |
+| Push khi app đóng | nhận (`firebase_messaging`/PushKit) | ✅ Android gửi thật (FCM Go SDK) — iOS (`apns2`) chưa làm |
 | System Call UI | ✅ `flutter_callkit_incoming` | — |
+| Redeliver offer khi callee reconnect | nhận qua WS như bình thường | ✅ lưu `OfferSDP` + `pending_offer` (Redis), tự gửi lại lúc `register()` |
+| Reject khi app bị kill (Decline trên CallKit) | ✅ native Kotlin (`CallRejectNativeHandler`), không qua Flutter engine | ✅ `POST /calls/:roomId/reject` (REST fallback, không cần WS) |
 | Audio Focus / Route | ✅ native (AudioManager/AVAudioSession) | — |
 | TURN/STUN relay | dùng credential từ Server | ✅ coturn / `pion/turn` |
 | Xác thực (JWT) | gửi kèm request | ✅ phát hành & verify |

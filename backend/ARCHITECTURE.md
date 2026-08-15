@@ -57,9 +57,12 @@ kết nối WS ở một số client).
 
 ## internal/push
 
-Interface `Dispatcher` với 1 implementation duy nhất hiện tại: `LogDispatcher` (chỉ log ra
-console). Khi có tài khoản Firebase/Apple Developer thật, thêm implementation mới (vd.
-`FCMDispatcher`, `APNsDispatcher`) và đổi ở `cmd/server/main.go` — không sửa `internal/signaling`.
+Interface `Dispatcher` với 2 implementation: `LogDispatcher` (chỉ log ra console, dùng khi chưa
+cấu hình Firebase) và `FCMDispatcher` (**đã nối thật** — gửi FCM data message priority cao qua
+`firebase.google.com/go/v4/messaging`). `cmd/server/main.go` tự chọn dựa trên
+`cfg.FirebaseCredentialsPath` (env `FIREBASE_CREDENTIALS_PATH`, trỏ tới service account JSON tải
+từ Firebase Console) — trống thì fallback `LogDispatcher`. iOS (`apns2`) chưa làm, cần Apple
+Developer Program thật.
 
 ## internal/signaling (Hub — module trung tâm)
 
@@ -69,12 +72,21 @@ console). Khi có tài khoản Firebase/Apple Developer thật, thêm implementa
 - `Hub` (`hub.go`): map `userID -> *Client` **local cho instance hiện tại**. Khi user gửi/nhận
   không cùng instance, tra `presence:{userId}` để biết instance đích rồi publish qua Redis.
 - `handlers.go`: xử lý từng `MessageType`.
-  - `offer`: sinh `roomId` nếu Client chưa gửi, tạo `RoomState` RINGING, thử route trực tiếp —
-    nếu callee offline hoàn toàn (không có presence ở instance nào), gọi `push.Dispatcher`.
-  - `answer`: chuyển room sang CONNECTED (TTL nới ra 6h).
+  - `offer`: sinh `roomId` nếu Client chưa gửi, tạo `RoomState` RINGING (kèm lưu `OfferSDP`), thử
+    route trực tiếp — nếu callee offline hoàn toàn (không có presence ở instance nào), gọi
+    `push.Dispatcher`. Đồng thời `SetPendingOffer(calleeID, roomID)` (Redis, TTL = ringingTTL) để
+    `Hub.register()` tự redeliver lại offer này nếu callee reconnect trước khi room hết hạn (bù
+    cho việc offer chỉ forward sống 1 lần — callee bị đánh thức qua Push mới mở lại app thì
+    offer gốc đã "bay mất" nếu không lưu lại, xem §5.2 tài liệu gốc).
+  - `answer`: chuyển room sang CONNECTED (TTL nới ra 6h), `ClearPendingOffer(m.From)`.
   - `ice-candidate`: chỉ forward, không chạm state.
   - `call-end`/`call-reject`: đọc room trước khi xoá (lấy participants/thời điểm bắt đầu), ghi
-    1 dòng bền vững vào `call_history`, rồi forward cho phía còn lại.
+    1 dòng bền vững vào `call_history`, `ClearPendingOffer` cho toàn bộ participants, rồi forward
+    cho phía còn lại.
+  - `Hub.RejectCall(roomID, fromUserID)`: fallback REST (`POST /calls/:roomId/reject`) cho cùng
+    logic reject — dùng khi Client không có WS sống để tự gửi `call-reject` (app bị kill, quyết
+    định Decline đến từ code native Android ngoài Flutter engine, xem
+    `app/android/.../CallRejectNativeHandler.kt`).
 - **Bảo mật:** field `from` trong message luôn bị override bằng userID đã xác thực qua JWT lúc
   upgrade WebSocket — Client gửi `from` gì cũng bị ghi đè, chống giả mạo danh tính người gọi.
 

@@ -46,3 +46,12 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Đọc/ghi JWT token từ code native (CallRejectNativeHandler) — cùng cơ
+    // chế mã hoá Android Keystore mà flutter_secure_storage dùng, nhưng
+    // dùng file riêng do chính app quản lý (xem NativeAuthBridge.kt) thay
+    // vì đọc trực tiếp định dạng nội bộ của flutter_secure_storage (dễ vỡ
+    // khi plugin đó đổi implementation).
+    implementation("androidx.security:security-crypto:1.1.0")
+}

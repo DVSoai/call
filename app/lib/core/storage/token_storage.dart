@@ -1,5 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../push/native_auth_bridge.dart';
+
 /// Lưu JWT + thông tin user cơ bản vào secure storage (Keychain/Keystore)
 /// — không bao giờ lưu token dạng plaintext (SharedPreferences).
 ///
@@ -32,6 +34,10 @@ class TokenStorage {
       _storage.write(key: _displayNameKey, value: displayName),
       _storage.write(key: _preferredLanguageKey, value: preferredLanguage),
     ]);
+    // Bản sao riêng cho native (CallRejectNativeHandler) — xem
+    // native_auth_bridge.dart. Không await/không chặn — fire-and-forget,
+    // không phải nguồn sự thật.
+    NativeAuthBridge.saveToken(token);
   }
 
   Future<String?> readToken() => _storage.read(key: _tokenKey);
@@ -59,5 +65,6 @@ class TokenStorage {
       _storage.delete(key: _displayNameKey),
       _storage.delete(key: _preferredLanguageKey),
     ]);
+    NativeAuthBridge.clearToken();
   }
 }
