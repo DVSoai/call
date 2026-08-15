@@ -104,7 +104,11 @@ class _ConversationTile extends StatelessWidget {
       trailing: conversation.lastMessageAt != null ? Text(_formatTime(conversation.lastMessageAt!)) : null,
       onTap: () => context.push(
         '/message/chat/${conversation.id}',
-        extra: ChatPageArgs(title: title, peerId: conversation.peerIdFor(currentUserId)),
+        extra: ChatPageArgs(
+          title: title,
+          peerId: conversation.peerIdFor(currentUserId),
+          participantIds: conversation.groupParticipantIdsFor(currentUserId),
+        ),
       ),
     );
   }

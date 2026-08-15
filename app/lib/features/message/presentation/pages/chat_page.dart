@@ -6,21 +6,22 @@ import '../../domain/entities/chat_message_entity.dart';
 import '../bloc/chat_bloc.dart';
 
 /// Đối số cho route /message/chat/:id — [peerId] chỉ có với conversation
-/// "direct" (1-1), null với "group" vì Group Call (SFU) chưa build (xem
-/// CLAUDE.md — chỉ chương 1-1 đã ổn định), nên nút gọi trong ChatPage chỉ
-/// hiện khi có peerId.
+/// "direct" (1-1). [participantIds] chỉ có với "group" (đã loại trừ chính
+/// mình) — dùng để gọi CallEvent.groupCallRequested, không dùng cho gì khác.
 class ChatPageArgs {
   final String title;
   final String? peerId;
+  final List<String> participantIds;
 
-  const ChatPageArgs({required this.title, this.peerId});
+  const ChatPageArgs({required this.title, this.peerId, this.participantIds = const []});
 }
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key, required this.title, this.peerId});
+  const ChatPage({super.key, required this.title, this.peerId, this.participantIds = const []});
 
   final String title;
   final String? peerId;
+  final List<String> participantIds;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -64,12 +65,12 @@ class _ChatPageState extends State<ChatPage> {
     final currentUserId = context.read<ChatBloc>().currentUserId;
 
     final peerId = widget.peerId;
+    final groupParticipantIds = widget.participantIds;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        actions: peerId == null
-            ? null
-            : [
+        actions: peerId != null
+            ? [
                 IconButton(
                   tooltip: 'Gọi thoại',
                   icon: const Icon(Icons.call_outlined),
@@ -84,7 +85,20 @@ class _ChatPageState extends State<ChatPage> {
                       .read<CallBloc>()
                       .add(CallEvent.outgoingCallRequested(calleeId: peerId, isVideo: true)),
                 ),
-              ],
+              ]
+            : groupParticipantIds.isEmpty
+                ? null
+                : [
+                    // v1 Group Call chỉ audio (xem docs/CALL_SYSTEM.md §7) —
+                    // chưa có nút gọi video nhóm.
+                    IconButton(
+                      tooltip: 'Gọi nhóm',
+                      icon: const Icon(Icons.call_outlined),
+                      onPressed: () => context
+                          .read<CallBloc>()
+                          .add(CallEvent.groupCallRequested(participantIds: groupParticipantIds)),
+                    ),
+                  ],
       ),
       body: Column(
         children: [

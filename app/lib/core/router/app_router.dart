@@ -127,7 +127,11 @@ GoRouter buildAppRouter({required AuthBloc authBloc, required CallBloc callBloc}
               listMessagesUseCase: getIt(),
               repository: getIt(),
             )..add(const ChatEvent.started()),
-            child: ChatPage(title: args?.title ?? 'Trò chuyện', peerId: args?.peerId),
+            child: ChatPage(
+              title: args?.title ?? 'Trò chuyện',
+              peerId: args?.peerId,
+              participantIds: args?.participantIds ?? const [],
+            ),
           );
         },
       ),

@@ -41,7 +41,11 @@ class _NewConversationPageState extends State<NewConversationPage> {
             final conv = state.created!;
             context.pushReplacement(
               '/message/chat/${conv.id}',
-              extra: ChatPageArgs(title: conv.displayTitle(currentUserId), peerId: conv.peerIdFor(currentUserId)),
+              extra: ChatPageArgs(
+                title: conv.displayTitle(currentUserId),
+                peerId: conv.peerIdFor(currentUserId),
+                participantIds: conv.groupParticipantIdsFor(currentUserId),
+              ),
             );
           }
         },

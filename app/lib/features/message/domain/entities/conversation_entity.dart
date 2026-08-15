@@ -69,13 +69,21 @@ class ConversationEntity extends Equatable {
     return peer.displayName.isNotEmpty ? peer.displayName : peer.phone;
   }
 
-  /// userId người còn lại — null với group (Group Call/SFU chưa build,
-  /// xem CLAUDE.md) hoặc khi participants rỗng. Dùng để hiện nút gọi trực
+  /// userId người còn lại — null với group (dùng [groupParticipantIdsFor]
+  /// thay thế) hoặc khi participants rỗng. Dùng để hiện nút gọi 1-1 trực
   /// tiếp từ màn hình chat.
   String? peerIdFor(String currentUserId) {
     if (type == ConversationType.group) return null;
     final others = participants.where((p) => p.id != currentUserId);
     return others.isEmpty ? null : others.first.id;
+  }
+
+  /// Danh sách participantIds cho Group Call (đã loại trừ currentUserId) —
+  /// rỗng nếu không phải conversation "group". Dùng để hiện nút "Gọi nhóm"
+  /// từ màn hình chat.
+  List<String> groupParticipantIdsFor(String currentUserId) {
+    if (type != ConversationType.group) return const [];
+    return participants.where((p) => p.id != currentUserId).map((p) => p.id).toList();
   }
 
   ConversationEntity copyWith({DateTime? lastMessageAt, String? lastMessagePreview}) => ConversationEntity(

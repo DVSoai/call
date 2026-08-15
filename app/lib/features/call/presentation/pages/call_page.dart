@@ -85,20 +85,27 @@ class _CallPageState extends State<CallPage> {
   }
 
   Widget _buildBody(BuildContext context, CallState state) {
+    final isGroup = state.callMode == 'group';
     switch (state.status) {
       case CallStatus.outgoingRinging:
         return _RingingView(peerId: state.peerId ?? '', title: 'Đang gọi...');
       case CallStatus.incomingRinging:
-        return _IncomingView(peerId: state.peerId ?? '', callType: state.callType);
+        return isGroup
+            ? const _GroupIncomingView()
+            : _IncomingView(peerId: state.peerId ?? '', callType: state.callType);
       case CallStatus.connecting:
-        return _RingingView(peerId: state.peerId ?? '', title: 'Đang kết nối...');
+        return isGroup
+            ? const _GroupConnectingView()
+            : _RingingView(peerId: state.peerId ?? '', title: 'Đang kết nối...');
       case CallStatus.connected:
-        return _InCallView(
-          state: state,
-          localRenderer: _renderersReady ? _localRenderer : null,
-          remoteRenderer: _renderersReady ? _remoteRenderer : null,
-          elapsedText: _formatElapsed(state.elapsed),
-        );
+        return isGroup
+            ? _GroupInCallView(state: state, elapsedText: _formatElapsed(state.elapsed))
+            : _InCallView(
+                state: state,
+                localRenderer: _renderersReady ? _localRenderer : null,
+                remoteRenderer: _renderersReady ? _remoteRenderer : null,
+                elapsedText: _formatElapsed(state.elapsed),
+              );
       case CallStatus.ended:
         return Center(
           child: Text(
@@ -278,6 +285,150 @@ String _labelForAudioOutput(String label) {
   if (l.contains('wired') || l.contains('headset') || l.contains('headphone')) return 'Tai nghe';
   if (l.contains('earpiece') || l.contains('receiver')) return 'Tai nghe thoại (áp tai)';
   return label.isNotEmpty ? label : 'Thiết bị âm thanh';
+}
+
+/// Group Call v1 chỉ audio (xem docs/CALL_SYSTEM.md §7) — không có tên hiển
+/// thị người mời (CallState chỉ giữ userID, chưa tra display name), UI cố
+/// tình chung chung "Cuộc gọi nhóm" thay vì hiện UUID cho user.
+class _GroupConnectingView extends StatelessWidget {
+  const _GroupConnectingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircleAvatar(radius: 48, child: Icon(Icons.groups, size: 48)),
+          const SizedBox(height: 16),
+          const Text('Đang kết nối cuộc gọi nhóm...', style: TextStyle(color: Colors.white, fontSize: 18)),
+          const SizedBox(height: 40),
+          FloatingActionButton(
+            heroTag: 'end_call',
+            backgroundColor: Colors.red,
+            onPressed: () => context.read<CallBloc>().add(const CallEvent.endRequested()),
+            child: const Icon(Icons.call_end),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupIncomingView extends StatelessWidget {
+  const _GroupIncomingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircleAvatar(radius: 48, child: Icon(Icons.groups, size: 48)),
+          const SizedBox(height: 16),
+          const Text('Cuộc gọi nhóm đến', style: TextStyle(color: Colors.white, fontSize: 20)),
+          const SizedBox(height: 40),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FloatingActionButton(
+                heroTag: 'reject_call',
+                backgroundColor: Colors.red,
+                onPressed: () => context.read<CallBloc>().add(const CallEvent.rejectRequested()),
+                child: const Icon(Icons.call_end),
+              ),
+              const SizedBox(width: 32),
+              FloatingActionButton(
+                heroTag: 'accept_call',
+                backgroundColor: Colors.green,
+                onPressed: () => context.read<CallBloc>().add(const CallEvent.acceptRequested()),
+                child: const Icon(Icons.call),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Audio-only (v1) nên không cần grid video — hiện danh sách avatar những
+/// người ĐANG publish audio thật (CallBloc.groupRemoteStreams.keys), không
+/// dùng participantIds (đó là danh sách MỜI, có thể có người chưa join).
+class _GroupInCallView extends StatelessWidget {
+  const _GroupInCallView({required this.state, required this.elapsedText});
+
+  final CallState state;
+  final String elapsedText;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeUserIds = context.read<CallBloc>().groupRemoteStreams.keys.toList();
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 24, bottom: 120, left: 24, right: 24),
+          child: Column(
+            children: [
+              Text(elapsedText, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              Expanded(
+                child: activeUserIds.isEmpty
+                    ? const Center(
+                        child: Text('Đang chờ người khác tham gia...', style: TextStyle(color: Colors.white70)),
+                      )
+                    : Wrap(
+                        spacing: 20,
+                        runSpacing: 20,
+                        alignment: WrapAlignment.center,
+                        children: activeUserIds.map((_) => const _ParticipantAvatar()).toList(),
+                      ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 32,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _ControlButton(
+                icon: state.isMuted ? Icons.mic_off : Icons.mic,
+                onPressed: () => context.read<CallBloc>().add(const CallEvent.muteToggled()),
+              ),
+              const SizedBox(width: 16),
+              _ControlButton(
+                icon: state.isSpeakerOn ? Icons.volume_up : Icons.hearing,
+                onPressed: () => _showAudioOutputPicker(context),
+              ),
+              const SizedBox(width: 16),
+              FloatingActionButton(
+                heroTag: 'hangup',
+                backgroundColor: Colors.red,
+                onPressed: () => context.read<CallBloc>().add(const CallEvent.endRequested()),
+                child: const Icon(Icons.call_end),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ParticipantAvatar extends StatelessWidget {
+  const _ParticipantAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CircleAvatar(
+      radius: 32,
+      backgroundColor: Colors.white24,
+      child: Icon(Icons.person, color: Colors.white, size: 32),
+    );
+  }
 }
 
 class _InCallView extends StatelessWidget {
