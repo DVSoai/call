@@ -33,6 +33,13 @@ sealed class CallState with _$CallState {
     @Default(false) bool isMuted,
     @Default(false) bool isCameraOff,
     @Default(false) bool isSpeakerOn,
+
+    // "direct" (1-1, mặc định) | "group" — cùng convention với
+    // Conversation.type. peerId (số ít) chỉ có ý nghĩa cho direct, giữ
+    // nguyên không đổi cho toàn bộ luồng 1-1 cũ. participantIds chỉ dùng
+    // cho group.
+    @Default('direct') String callMode,
+    @Default(<String>[]) List<String> participantIds,
     @Default(false) bool isSignalingConnected,
     String? errorMessage,
     @Default(Duration.zero) Duration elapsed,

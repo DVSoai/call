@@ -30,6 +30,33 @@ class CallRepositoryImpl implements CallRepository {
   }
 
   @override
+  Future<Either<Failure, String>> createGroupCall({
+    required List<String> participantIds,
+    required String callType,
+  }) async {
+    try {
+      final roomId = await _remote.createGroupCall(participantIds: participantIds, callType: callType);
+      return Right(roomId);
+    } on DioException catch (e) {
+      return Left(Failure(AppException.fromDioException(e).message));
+    } catch (e) {
+      return Left(Failure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> joinGroupCall(String roomId) async {
+    try {
+      await _remote.joinGroupCall(roomId);
+      return const Right(null);
+    } on DioException catch (e) {
+      return Left(Failure(AppException.fromDioException(e).message));
+    } catch (e) {
+      return Left(Failure(e.toString()));
+    }
+  }
+
+  @override
   Future<void> connectSignaling() async {
     final token = await _tokenStorage.readToken();
     if (token == null || token.isEmpty) {

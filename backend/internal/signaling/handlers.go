@@ -251,15 +251,35 @@ func (h *Hub) handleICECandidate(ctx context.Context, m Message) {
 	h.forward(ctx, m)
 }
 
-// handleCallEnd đóng room, ghi call_history rồi forward cho phía còn lại.
+// handleCallEnd: ModeGroup nghĩa là 1 người RỜI group room (không phải kết
+// thúc cho tất cả) — chỉ gỡ đúng Peer đó khỏi SFU, room vẫn sống cho những
+// người còn lại. Mặc định (1-1) giữ nguyên: đóng room, ghi call_history,
+// forward cho phía còn lại.
 func (h *Hub) handleCallEnd(ctx context.Context, m Message) {
+	room, err := h.store.Get(ctx, m.CallID)
+	if err != nil {
+		log.Printf("signaling: đọc room %s lỗi lúc handleCallEnd: %v", m.CallID, err)
+	}
+	if room != nil && room.IsGroup() {
+		h.sfuManager.Leave(m.CallID, m.From)
+		return
+	}
 	h.finalizeRoom(ctx, m.CallID, entity.StatusCompleted)
 	h.forward(ctx, m)
 }
 
-// handleCallReject đóng room, ghi call_history với status rejected rồi
-// forward cho caller.
+// handleCallReject: ModeGroup nghĩa là 1 invitee từ chối lời mời TRƯỚC KHI
+// join SFU (chưa có Peer nào để gỡ) — không kết thúc room, những người khác
+// vẫn tham gia được bình thường. Mặc định (1-1) giữ nguyên: đóng room, ghi
+// call_history rejected, forward cho caller.
 func (h *Hub) handleCallReject(ctx context.Context, m Message) {
+	room, err := h.store.Get(ctx, m.CallID)
+	if err != nil {
+		log.Printf("signaling: đọc room %s lỗi lúc handleCallReject: %v", m.CallID, err)
+	}
+	if room != nil && room.IsGroup() {
+		return
+	}
 	h.finalizeRoom(ctx, m.CallID, entity.StatusRejected)
 	h.forward(ctx, m)
 }

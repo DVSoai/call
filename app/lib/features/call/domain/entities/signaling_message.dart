@@ -38,6 +38,10 @@ class SignalingMessage extends Equatable {
   final Map<String, dynamic>? candidate;
   final String? callType; // "audio" | "video", chỉ có ý nghĩa ở offer
 
+  // "group" cho Group Call (SFU) — null/"direct" cho call 1-1 như cũ. Field
+  // mới hoàn toàn, không đổi field cũ nào (xem backend Payload.Mode).
+  final String? mode;
+
   const SignalingMessage({
     required this.type,
     required this.from,
@@ -46,7 +50,10 @@ class SignalingMessage extends Equatable {
     this.sdp,
     this.candidate,
     this.callType,
+    this.mode,
   });
+
+  bool get isGroup => mode == 'group';
 
   factory SignalingMessage.fromJson(Map<String, dynamic> json) {
     final payload = (json['payload'] as Map<String, dynamic>?) ?? const {};
@@ -58,6 +65,7 @@ class SignalingMessage extends Equatable {
       sdp: payload['sdp'] as String?,
       candidate: (payload['candidate'] as Map?)?.cast<String, dynamic>(),
       callType: payload['callType'] as String?,
+      mode: payload['mode'] as String?,
     );
   }
 
@@ -70,9 +78,10 @@ class SignalingMessage extends Equatable {
           if (sdp != null) 'sdp': sdp,
           if (candidate != null) 'candidate': candidate,
           if (callType != null) 'callType': callType,
+          if (mode != null) 'mode': mode,
         },
       };
 
   @override
-  List<Object?> get props => [type, from, to, callId, sdp, candidate, callType];
+  List<Object?> get props => [type, from, to, callId, sdp, candidate, callType, mode];
 }

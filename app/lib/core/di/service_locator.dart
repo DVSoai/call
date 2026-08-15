@@ -9,7 +9,9 @@ import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/call/data/datasources/call_remote_data_source.dart';
 import '../../features/call/data/repositories/call_repository_impl.dart';
 import '../../features/call/domain/repositories/call_repository.dart';
+import '../../features/call/domain/usecases/create_group_call_usecase.dart';
 import '../../features/call/domain/usecases/get_turn_credentials_usecase.dart';
+import '../../features/call/domain/usecases/join_group_call_usecase.dart';
 import '../../features/call/presentation/bloc/call_bloc.dart';
 import '../../features/contacts/data/datasources/contacts_remote_data_source.dart';
 import '../../features/contacts/data/repositories/contacts_repository_impl.dart';
@@ -81,8 +83,16 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton(() => CallRemoteDataSource(getIt()));
   getIt.registerLazySingleton<CallRepository>(() => CallRepositoryImpl(getIt(), getIt(), getIt()));
   getIt.registerFactory(() => GetTurnCredentialsUseCase(getIt()));
+  getIt.registerFactory(() => CreateGroupCallUseCase(getIt()));
+  getIt.registerFactory(() => JoinGroupCallUseCase(getIt()));
   getIt.registerLazySingleton(
-    () => CallBloc(repository: getIt(), getTurnCredentialsUseCase: getIt(), tokenStorage: getIt()),
+    () => CallBloc(
+      repository: getIt(),
+      getTurnCredentialsUseCase: getIt(),
+      createGroupCallUseCase: getIt(),
+      joinGroupCallUseCase: getIt(),
+      tokenStorage: getIt(),
+    ),
   );
 
   // ---- history ----

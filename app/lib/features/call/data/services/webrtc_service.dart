@@ -17,11 +17,20 @@ class WebRtcService {
   MediaStream? localStream;
   MediaStream? remoteStream;
 
+  // Group Call (SFU): 1 PeerConnection duy nhất với Server nhưng nhận NHIỀU
+  // track cùng lúc (1 track/participant khác) — khác 1-1 (đúng 1 remoteStream).
+  // Key = MediaStream.id, SFU cố tình gán bằng userID người publish (xem
+  // internal/sfu/room.go) để biết audio vừa nhận là của ai.
+  bool _isGroup = false;
+  final Map<String, MediaStream> groupRemoteStreams = {};
+
   final _remoteStreamController = StreamController<MediaStream>.broadcast();
+  final _groupRemoteStreamsController = StreamController<Map<String, MediaStream>>.broadcast();
   final _localIceCandidateController = StreamController<RTCIceCandidate>.broadcast();
   final _connectionStateController = StreamController<RTCPeerConnectionState>.broadcast();
 
   Stream<MediaStream> get onRemoteStream => _remoteStreamController.stream;
+  Stream<Map<String, MediaStream>> get onGroupRemoteStreamsChanged => _groupRemoteStreamsController.stream;
   Stream<RTCIceCandidate> get onLocalIceCandidate => _localIceCandidateController.stream;
   Stream<RTCPeerConnectionState> get onConnectionState => _connectionStateController.stream;
 
@@ -47,7 +56,8 @@ class WebRtcService {
     }
   }
 
-  Future<void> initPeerConnection(List<IceServer> iceServers) async {
+  Future<void> initPeerConnection(List<IceServer> iceServers, {bool isGroup = false}) async {
+    _isGroup = isGroup;
     final configuration = <String, dynamic>{
       'iceServers': iceServers.map((s) => s.toWebRtcConfig()).toList(),
       'sdpSemantics': 'unified-plan',
@@ -60,10 +70,22 @@ class WebRtcService {
       if (candidate.candidate != null) _localIceCandidateController.add(candidate);
     };
     pc.onTrack = (event) {
-      if (event.streams.isNotEmpty) {
-        remoteStream = event.streams.first;
+      if (event.streams.isEmpty) return;
+      final stream = event.streams.first;
+      if (_isGroup) {
+        groupRemoteStreams[stream.id] = stream;
+        _groupRemoteStreamsController.add(Map.unmodifiable(groupRemoteStreams));
+      } else {
+        remoteStream = stream;
         _remoteStreamController.add(remoteStream!);
       }
+    };
+    // Chỉ có ý nghĩa cho group — SFU bỏ track của 1 participant (họ rời
+    // room) khiến Server renegotiate lại, track biến mất khỏi PeerConnection.
+    pc.onRemoveTrack = (stream, _) {
+      if (!_isGroup) return;
+      groupRemoteStreams.remove(stream.id);
+      _groupRemoteStreamsController.add(Map.unmodifiable(groupRemoteStreams));
     };
     pc.onConnectionState = (state) => _connectionStateController.add(state);
 
@@ -153,12 +175,17 @@ class WebRtcService {
   Future<void> dispose() async {
     await localStream?.dispose();
     await remoteStream?.dispose();
+    for (final stream in groupRemoteStreams.values) {
+      await stream.dispose();
+    }
+    groupRemoteStreams.clear();
     await _peerConnection?.close();
     await _peerConnection?.dispose();
     _peerConnection = null;
     localStream = null;
     remoteStream = null;
     await _remoteStreamController.close();
+    await _groupRemoteStreamsController.close();
     await _localIceCandidateController.close();
     await _connectionStateController.close();
   }

@@ -11,6 +11,14 @@ sealed class CallEvent with _$CallEvent {
     required bool isVideo,
   }) = CallOutgoingRequested;
 
+  /// Bắt đầu 1 Group Call (SFU, audio-only v1) — mời participantIds qua
+  /// POST /calls/group. Khác outgoingCallRequested: không tạo offer P2P
+  /// ngay, chỉ tạo room + gửi lời mời — SDP thật chỉ sinh ra sau khi từng
+  /// người bấm Accept (join SFU), xem docs/CALL_SYSTEM.md §7.
+  const factory CallEvent.groupCallRequested({
+    required List<String> participantIds,
+  }) = CallGroupRequested;
+
   const factory CallEvent.acceptRequested() = CallAcceptRequested;
 
   const factory CallEvent.rejectRequested() = CallRejectRequested;

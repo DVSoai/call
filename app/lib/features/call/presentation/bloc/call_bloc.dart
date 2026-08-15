@@ -14,7 +14,9 @@ import '../../domain/entities/ice_server.dart';
 import '../../domain/entities/signaling_message.dart';
 import '../../domain/entities/turn_credentials.dart';
 import '../../domain/repositories/call_repository.dart';
+import '../../domain/usecases/create_group_call_usecase.dart';
 import '../../domain/usecases/get_turn_credentials_usecase.dart';
+import '../../domain/usecases/join_group_call_usecase.dart';
 
 part 'call_bloc.freezed.dart';
 part 'call_event.dart';
@@ -32,13 +34,18 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   CallBloc({
     required CallRepository repository,
     required GetTurnCredentialsUseCase getTurnCredentialsUseCase,
+    required CreateGroupCallUseCase createGroupCallUseCase,
+    required JoinGroupCallUseCase joinGroupCallUseCase,
     required TokenStorage tokenStorage,
   })  : _repository = repository,
         _getTurnCredentialsUseCase = getTurnCredentialsUseCase,
+        _createGroupCallUseCase = createGroupCallUseCase,
+        _joinGroupCallUseCase = joinGroupCallUseCase,
         _tokenStorage = tokenStorage,
         super(const CallState()) {
     on<CallSignalingStarted>(_onSignalingStarted);
     on<CallOutgoingRequested>(_onOutgoingCallRequested);
+    on<CallGroupRequested>(_onGroupCallRequested);
     on<CallAcceptRequested>(_onAcceptRequested);
     on<CallRejectRequested>(_onRejectRequested);
     on<CallEndRequested>(_onEndRequested);
@@ -61,6 +68,8 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   final CallRepository _repository;
   final GetTurnCredentialsUseCase _getTurnCredentialsUseCase;
+  final CreateGroupCallUseCase _createGroupCallUseCase;
+  final JoinGroupCallUseCase _joinGroupCallUseCase;
   final TokenStorage _tokenStorage;
   final _uuid = const Uuid();
 
@@ -171,9 +180,29 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   }
 
   Future<void> _onAcceptRequested(CallAcceptRequested event, Emitter<CallState> emit) async {
-    if (state.status != CallStatus.incomingRinging || state.pendingRemoteOfferSdp == null) return;
+    if (state.status != CallStatus.incomingRinging) return;
     _cancelRingTimer();
 
+    if (state.callMode == 'group') {
+      // Group: chưa có SDP peer-to-peer nào để answer — phải join SFU
+      // trước (POST /calls/:roomId/join), Server sẽ tự gửi offer xuống qua
+      // WS sau đó (xem _handleGroupOffer).
+      emit(state.copyWith(status: CallStatus.connecting));
+      try {
+        final service = _startNewWebRtcSession();
+        await service.openLocalMedia(video: false); // v1 chỉ audio
+        final iceServers = await _fetchIceServers();
+        await service.initPeerConnection(iceServers, isGroup: true);
+        await _joinGroupCall(state.roomId!);
+      } catch (e, st) {
+        AppLogger.e('CallBloc: join group call lỗi', e, st);
+        await _cleanupWebRtc();
+        emit(state.copyWith(status: CallStatus.failure, errorMessage: e.toString()));
+      }
+      return;
+    }
+
+    if (state.pendingRemoteOfferSdp == null) return;
     final myId = await _tokenStorage.readUserId() ?? '';
     emit(state.copyWith(status: CallStatus.connecting));
 
@@ -198,6 +227,41 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     }
   }
 
+  /// Bắt đầu 1 Group Call (SFU, audio-only v1) — tạo room qua REST rồi tự
+  /// join luôn (người tạo cũng phải join SFU như mọi participant khác,
+  /// không có gì đặc biệt hơn). Không có khái niệm "outgoingRinging chờ 1
+  /// người trả lời" như 1-1 — người tạo vào thẳng connecting, người được
+  /// mời tham gia dần dần qua incomingRinging riêng của từng người (xem
+  /// _handleGroupOffer).
+  Future<void> _onGroupCallRequested(CallGroupRequested event, Emitter<CallState> emit) async {
+    if (state.status != CallStatus.idle) {
+      AppLogger.w('CallBloc: đang có cuộc gọi khác, bỏ qua groupCallRequested');
+      return;
+    }
+
+    emit(state.copyWith(
+      status: CallStatus.connecting,
+      callMode: 'group',
+      participantIds: event.participantIds,
+      callType: 'audio',
+    ));
+
+    try {
+      final roomId = await _createGroupCallRoom(event.participantIds);
+      emit(state.copyWith(roomId: roomId));
+
+      final service = _startNewWebRtcSession();
+      await service.openLocalMedia(video: false);
+      final iceServers = await _fetchIceServers();
+      await service.initPeerConnection(iceServers, isGroup: true);
+      await _joinGroupCall(roomId);
+    } catch (e, st) {
+      AppLogger.e('CallBloc: groupCallRequested lỗi', e, st);
+      await _cleanupWebRtc();
+      emit(state.copyWith(status: CallStatus.failure, errorMessage: e.toString()));
+    }
+  }
+
   Future<void> _onRejectRequested(CallRejectRequested event, Emitter<CallState> emit) async {
     if (state.status != CallStatus.incomingRinging) return;
     _cancelRingTimer();
@@ -213,18 +277,24 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       roomId: null,
       peerId: null,
       pendingRemoteOfferSdp: null,
+      callMode: 'direct',
+      participantIds: const [],
     ));
   }
 
   Future<void> _onEndRequested(CallEndRequested event, Emitter<CallState> emit) async {
     _cancelRingTimer();
-    if (state.roomId != null && state.peerId != null && state.status != CallStatus.idle) {
+    // Group: peerId có thể null (người tạo room không có "1 peer" cụ thể) —
+    // backend chỉ cần callId+from để biết ai rời SFU room nào, "to" không
+    // quan trọng (khác 1-1, luôn có peerId nên hành vi cũ không đổi).
+    if (state.roomId != null && state.status != CallStatus.idle) {
       final myId = await _tokenStorage.readUserId() ?? '';
       _repository.sendSignaling(SignalingMessage(
         type: SignalingMessageType.callEnd,
         from: myId,
-        to: state.peerId!,
+        to: state.peerId ?? 'server',
         callId: state.roomId!,
+        mode: state.callMode == 'group' ? 'group' : null,
       ));
     }
     await _cleanupWebRtc();
@@ -236,6 +306,8 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
       isMuted: false,
       isCameraOff: false,
       isSpeakerOn: false,
+      callMode: 'direct',
+      participantIds: const [],
       elapsed: Duration.zero,
     ));
   }
@@ -327,6 +399,11 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   }
 
   Future<void> _handleIncomingOffer(SignalingMessage msg, Emitter<CallState> emit) async {
+    if (msg.isGroup) {
+      await _handleGroupOffer(msg, emit);
+      return;
+    }
+
     AppLogger.i('CallBloc: nhận offer từ ${msg.from}, callId=${msg.callId}, callType=${msg.callType}');
     if (state.status != CallStatus.idle) {
       // Đang bận cuộc gọi khác — tự động từ chối, không hiện Incoming UI.
@@ -350,6 +427,53 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
     if (_autoAcceptRoomIds.remove(msg.callId)) {
       add(const CallEvent.acceptRequested());
+    }
+  }
+
+  /// offer với Payload.mode="group" có 2 dạng hoàn toàn khác nhau, phân
+  /// biệt bằng việc có SDP hay không:
+  /// - Chưa có SDP: lời mời ban đầu (POST /calls/group vừa tạo room) — chỉ
+  ///   hiện Incoming UI, KHÔNG gán pendingRemoteOfferSdp (không có gì để
+  ///   answer trực tiếp, phải join SFU trước — xem _onAcceptRequested).
+  /// - Có SDP: offer thật từ SFU (đầu tiên sau khi join, hoặc renegotiate
+  ///   giữa cuộc gọi vì có người mới join/rời) — PeerConnection phải đã tồn
+  ///   tại từ trước (tạo lúc _onAcceptRequested/_onGroupCallRequested).
+  Future<void> _handleGroupOffer(SignalingMessage msg, Emitter<CallState> emit) async {
+    if (msg.sdp == null || msg.sdp!.isEmpty) {
+      if (state.status != CallStatus.idle) return; // đang bận việc khác
+      AppLogger.i('CallBloc: nhận lời mời group call từ ${msg.from}, callId=${msg.callId}');
+      emit(state.copyWith(
+        status: CallStatus.incomingRinging,
+        roomId: msg.callId,
+        peerId: msg.from,
+        callType: msg.callType ?? 'audio',
+        callMode: 'group',
+      ));
+      _startRingTimer(msg.callId);
+      if (_autoAcceptRoomIds.remove(msg.callId)) {
+        add(const CallEvent.acceptRequested());
+      }
+      return;
+    }
+
+    // Offer thật từ SFU — có thể là offer đầu tiên (status == connecting)
+    // hoặc renegotiate giữa cuộc gọi đang connected (có người mới join) —
+    // xử lý y hệt nhau, chỉ khác là KHÔNG được đổi CallStatus ở nhánh sau.
+    if (msg.callId != state.roomId || _webRtcService == null) return;
+    try {
+      final service = _webRtcService!;
+      final answer = await service.createAnswer(msg.sdp!);
+      final myId = await _tokenStorage.readUserId() ?? '';
+      _repository.sendSignaling(SignalingMessage(
+        type: SignalingMessageType.answer,
+        from: myId,
+        to: 'server',
+        callId: state.roomId!,
+        sdp: answer.sdp,
+        mode: 'group',
+      ));
+    } catch (e, st) {
+      AppLogger.e('CallBloc: group createAnswer lỗi', e, st);
     }
   }
 
@@ -385,14 +509,18 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
   }
 
   Future<void> _onLocalIceCandidateGenerated(CallLocalIceCandidateGenerated event, Emitter<CallState> emit) async {
-    if (state.roomId == null || state.peerId == null) return;
+    // Group: peerId có thể null (người tạo room không có "1 peer" cụ thể
+    // nào) — backend route theo callId+room.Mode, không cần "to" đúng thật,
+    // nhưng vẫn phải gửi "to" hợp lệ theo schema (khác 1-1, không đổi).
+    if (state.roomId == null) return;
     final myId = await _tokenStorage.readUserId() ?? '';
     _repository.sendSignaling(SignalingMessage(
       type: SignalingMessageType.iceCandidate,
       from: myId,
-      to: state.peerId!,
+      to: state.peerId ?? 'server',
       callId: state.roomId!,
       candidate: event.candidate.toMap(),
+      mode: state.callMode == 'group' ? 'group' : null,
     ));
   }
 
