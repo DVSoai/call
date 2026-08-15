@@ -35,6 +35,17 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // sherpa_onnx và flutter_onnxruntime đều tự đóng gói cùng 1 thư viện
+    // native libonnxruntime.so (cả 2 wrap onnxruntime, mỗi bên phân phối
+    // riêng) — Gradle không tự chọn được nên báo lỗi trùng file lúc merge.
+    // pickFirst lấy đại 1 bản, đủ dùng vì cả 2 cùng gọi chung 1 bộ C API
+    // onnxruntime chuẩn (không phải fork riêng khác API).
+    packaging {
+        jniLibs {
+            pickFirsts += "**/libonnxruntime.so"
+        }
+    }
 }
 
 kotlin {
