@@ -255,7 +255,7 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
     ));
 
     try {
-      final roomId = await _createGroupCallRoom(event.participantIds);
+      final roomId = await _createGroupCallRoom(event.participantIds, event.conversationId);
       emit(state.copyWith(roomId: roomId));
 
       final service = _startNewWebRtcSession();
@@ -292,20 +292,29 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   Future<void> _onEndRequested(CallEndRequested event, Emitter<CallState> emit) async {
     _cancelRingTimer();
-    // Group: peerId có thể null (người tạo room không có "1 peer" cụ thể) —
-    // backend chỉ cần callId+from để biết ai rời SFU room nào, "to" không
-    // quan trọng (khác 1-1, luôn có peerId nên hành vi cũ không đổi).
-    if (state.roomId != null && state.status != CallStatus.idle) {
-      final myId = await _tokenStorage.readUserId() ?? '';
-      _repository.sendSignaling(SignalingMessage(
-        type: SignalingMessageType.callEnd,
-        from: myId,
-        to: state.peerId ?? 'server',
-        callId: state.roomId!,
-        mode: state.callMode == 'group' ? 'group' : null,
-      ));
+    // Bọc try/catch quanh TOÀN BỘ phần gửi tín hiệu + dọn WebRTC — nếu bất
+    // kỳ bước nào throw (vd. WebRtcService.dispose() lỗi native lúc đang
+    // dọn stream nhận từ SFU) mà không bắt lại, emit(idle) bên dưới sẽ
+    // KHÔNG BAO GIỜ chạy tới → user bấm cúp máy nhưng màn hình bị kẹt
+    // nguyên tại chỗ. Cúp máy phải LUÔN thoát ra được dù dọn dẹp có lỗi.
+    try {
+      // Group: peerId có thể null (người tạo room không có "1 peer" cụ thể)
+      // — backend chỉ cần callId+from để biết ai rời SFU room nào, "to"
+      // không quan trọng (khác 1-1, luôn có peerId nên hành vi cũ không đổi).
+      if (state.roomId != null && state.status != CallStatus.idle) {
+        final myId = await _tokenStorage.readUserId() ?? '';
+        _repository.sendSignaling(SignalingMessage(
+          type: SignalingMessageType.callEnd,
+          from: myId,
+          to: state.peerId ?? 'server',
+          callId: state.roomId!,
+          mode: state.callMode == 'group' ? 'group' : null,
+        ));
+      }
+      await _cleanupWebRtc();
+    } catch (e, st) {
+      AppLogger.e('CallBloc: endRequested dọn dẹp lỗi (vẫn thoát về idle)', e, st);
     }
-    await _cleanupWebRtc();
     emit(state.copyWith(
       status: CallStatus.idle,
       roomId: null,
@@ -573,12 +582,18 @@ class CallBloc extends BlocWithApi<CallEvent, CallState> {
 
   /// Tạo room Group Call qua POST /calls/group — dùng chung [callApi] như
   /// _fetchIceServers, giữ đúng convention gọi REST của cả file này.
-  Future<String> _createGroupCallRoom(List<String> participantIds) async {
+  /// conversationId (nếu có) giúp Server trả về room ĐANG SỐNG thay vì tạo
+  /// mới, khi group đó đã có cuộc gọi diễn ra (join lại).
+  Future<String> _createGroupCallRoom(List<String> participantIds, String? conversationId) async {
     String? roomId;
     String? error;
     await callApi<String, CreateGroupCallParams>(
       useCase: _createGroupCallUseCase,
-      param: CreateGroupCallParams(participantIds: participantIds, callType: 'audio'),
+      param: CreateGroupCallParams(
+        participantIds: participantIds,
+        callType: 'audio',
+        conversationId: conversationId,
+      ),
       onSuccess: (id) async => roomId = id,
       onFailure: (message) => error = message,
     );

@@ -148,21 +148,45 @@ func (h *Hub) invitePush(ctx context.Context, callerID, calleeID, roomID, callTy
 // CreateGroupCall tạo 1 room Mode=group RINGING rồi mời toàn bộ
 // participantIds — dùng bởi REST handler POST /calls/group. Trả về roomID
 // để Client biết room nào để gọi tiếp POST /calls/:roomId/join lúc Accept.
-func (h *Hub) CreateGroupCall(ctx context.Context, creatorID string, participantIDs []string, callType string) (string, error) {
+//
+// Nếu conversationID đã có 1 Group Call đang sống (bấm "Gọi nhóm" lần 2 cho
+// cùng group trong lúc cuộc gọi vẫn diễn ra — vd. vừa rời rồi bấm gọi lại)
+// — trả về ĐÚNG roomID đang có, KHÔNG tạo room mới/mời lại (người rồi
+// join lại chỉ cần POST /calls/:roomId/join là đủ, không cần "lời mời"
+// nữa vì họ chính là người chủ động gọi lại).
+func (h *Hub) CreateGroupCall(ctx context.Context, creatorID, conversationID string, participantIDs []string, callType string) (string, error) {
+	if conversationID != "" {
+		if existingRoomID, err := h.store.GetActiveGroupCall(ctx, conversationID); err != nil {
+			log.Printf("signaling: GetActiveGroupCall lỗi cho conversation %s: %v", conversationID, err)
+		} else if existingRoomID != "" {
+			if room, err := h.store.Get(ctx, existingRoomID); err != nil {
+				log.Printf("signaling: đọc room %s lỗi: %v", existingRoomID, err)
+			} else if room != nil {
+				return existingRoomID, nil
+			}
+		}
+	}
+
 	if callType == "" {
 		callType = "audio"
 	}
 	roomID := uuid.NewString()
 	room := calls.RoomState{
-		RoomID:       roomID,
-		CallType:     callType,
-		Mode:         calls.ModeGroup,
-		CreatedBy:    creatorID,
-		Participants: append([]string{creatorID}, participantIDs...),
-		CreatedAt:    time.Now(),
+		RoomID:         roomID,
+		CallType:       callType,
+		Mode:           calls.ModeGroup,
+		CreatedBy:      creatorID,
+		Participants:   append([]string{creatorID}, participantIDs...),
+		CreatedAt:      time.Now(),
+		ConversationID: conversationID,
 	}
 	if err := h.store.CreateRinging(ctx, room); err != nil {
 		return "", fmt.Errorf("signaling: CreateGroupCall: %w", err)
+	}
+	if conversationID != "" {
+		if err := h.store.SetActiveGroupCall(ctx, conversationID, roomID); err != nil {
+			log.Printf("signaling: SetActiveGroupCall lỗi cho conversation %s: %v", conversationID, err)
+		}
 	}
 	h.InviteGroupParticipants(ctx, room, creatorID)
 	return roomID, nil
@@ -261,7 +285,9 @@ func (h *Hub) handleCallEnd(ctx context.Context, m Message) {
 		log.Printf("signaling: đọc room %s lỗi lúc handleCallEnd: %v", m.CallID, err)
 	}
 	if room != nil && room.IsGroup() {
-		h.sfuManager.Leave(m.CallID, m.From)
+		if h.sfuManager.Leave(m.CallID, m.From) {
+			h.clearGroupRoom(ctx, m.CallID)
+		}
 		return
 	}
 	h.finalizeRoom(ctx, m.CallID, entity.StatusCompleted)

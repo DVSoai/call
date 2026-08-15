@@ -79,17 +79,21 @@ func (m *Manager) AddICECandidate(roomID, userID string, candidate map[string]an
 }
 
 // Leave gỡ Peer khỏi room khi user rời/kết thúc/mất kết nối — hook vào
-// Hub.unregister() hiện có. Tự xoá Room nếu rỗng sau khi gỡ.
-func (m *Manager) Leave(roomID, userID string) {
+// Hub.unregister() hiện có. Tự xoá Room nếu rỗng sau khi gỡ. Trả về true
+// nếu room đã rỗng (người cuối cùng vừa rời) — Hub dùng để biết lúc nào cần
+// dọn luôn RoomState/active_group_call mapping bên calls.Store.
+func (m *Manager) Leave(roomID, userID string) bool {
 	m.mu.Lock()
 	room, ok := m.rooms[roomID]
 	m.mu.Unlock()
 	if !ok {
-		return
+		return false
 	}
-	if room.removePeer(userID) {
+	empty := room.removePeer(userID)
+	if empty {
 		m.mu.Lock()
 		delete(m.rooms, roomID)
 		m.mu.Unlock()
 	}
+	return empty
 }

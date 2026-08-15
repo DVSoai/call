@@ -13,11 +13,18 @@ class CallRemoteDataSource {
   }
 
   /// POST /calls/group — tạo room Group Call (SFU), trả về roomId để gọi
-  /// tiếp joinGroupCall() lúc user bấm Accept.
-  Future<String> createGroupCall({required List<String> participantIds, required String callType}) async {
+  /// tiếp joinGroupCall() lúc user bấm Accept. Truyền conversationId để
+  /// Server nhận ra "group này đang có cuộc gọi sống" và trả về đúng roomId
+  /// đang có (join lại) thay vì tạo room mới mỗi lần bấm gọi.
+  Future<String> createGroupCall({
+    required List<String> participantIds,
+    required String callType,
+    String? conversationId,
+  }) async {
     final res = await _dio.post('/calls/group', data: {
       'participantIds': participantIds,
       'callType': callType,
+      if (conversationId != null) 'conversationId': conversationId,
     });
     return (res.data as Map<String, dynamic>)['roomId'] as String;
   }

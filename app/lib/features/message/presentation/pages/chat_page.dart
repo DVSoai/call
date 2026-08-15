@@ -17,9 +17,16 @@ class ChatPageArgs {
 }
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key, required this.title, this.peerId, this.participantIds = const []});
+  const ChatPage({
+    super.key,
+    required this.title,
+    required this.conversationId,
+    this.peerId,
+    this.participantIds = const [],
+  });
 
   final String title;
+  final String conversationId;
   final String? peerId;
   final List<String> participantIds;
 
@@ -94,9 +101,10 @@ class _ChatPageState extends State<ChatPage> {
                     IconButton(
                       tooltip: 'Gọi nhóm',
                       icon: const Icon(Icons.call_outlined),
-                      onPressed: () => context
-                          .read<CallBloc>()
-                          .add(CallEvent.groupCallRequested(participantIds: groupParticipantIds)),
+                      onPressed: () => context.read<CallBloc>().add(CallEvent.groupCallRequested(
+                            participantIds: groupParticipantIds,
+                            conversationId: widget.conversationId,
+                          )),
                     ),
                   ],
       ),

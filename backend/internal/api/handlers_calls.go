@@ -94,6 +94,11 @@ func (rt *Router) handleRejectCall(c *gin.Context) {
 type createGroupCallRequest struct {
 	ParticipantIDs []string `json:"participantIds" binding:"required,min=1"`
 	CallType       string   `json:"callType"`
+	// ConversationID — tuỳ chọn, nhưng NÊN truyền khi gọi từ 1 group
+	// conversation nhắn tin có sẵn: cho phép Server nhận ra "group này đang
+	// có cuộc gọi sống" để JOIN LẠI thay vì tạo room mới (xem
+	// Hub.CreateGroupCall) — không truyền thì mỗi lần gọi luôn tạo room mới.
+	ConversationID string `json:"conversationId"`
 }
 
 // handleCreateGroupCall — POST /calls/group: tạo 1 Group Call (SFU) mời N
@@ -108,7 +113,7 @@ func (rt *Router) handleCreateGroupCall(c *gin.Context) {
 		return
 	}
 	creatorID := auth.UserIDFromContext(c)
-	roomID, err := rt.hub.CreateGroupCall(c.Request.Context(), creatorID, req.ParticipantIDs, req.CallType)
+	roomID, err := rt.hub.CreateGroupCall(c.Request.Context(), creatorID, req.ConversationID, req.ParticipantIDs, req.CallType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "không thể tạo group call"})
 		return

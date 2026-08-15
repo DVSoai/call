@@ -108,6 +108,13 @@ func (h *Hub) JoinGroupCall(ctx context.Context, roomID, userID string) error {
 	if err := h.sfuManager.Join(ctx, roomID, userID); err != nil {
 		return err
 	}
+	// Gia hạn TTL room lên connectedTTL — nếu không, room (dù SFU vẫn đang
+	// forward audio bình thường) sẽ tự hết hạn khỏi Redis sau 30s
+	// (ringingTTL), làm GetActiveGroupCall/redeliverPendingOffer nhìn thấy
+	// "không có cuộc gọi nào" dù thực ra vẫn đang diễn ra.
+	if err := h.store.ExtendGroupRoom(ctx, roomID); err != nil {
+		log.Printf("signaling: ExtendGroupRoom lỗi cho room %s: %v", roomID, err)
+	}
 	// Đánh dấu trên Client để unregister() dọn được SFU Peer nếu WS ngắt
 	// giữa chừng — user phải đang có WS sống mới join được (REST handler
 	// yêu cầu JWT hợp lệ nhưng không bắt buộc WS; nếu user gọi join REST
@@ -231,17 +238,36 @@ func (h *Hub) unregister(c *Client) {
 	if !stillCurrent {
 		return
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), redisOpTimeout)
+	defer cancel()
+
 	// Dọn SFU Peer nếu user đang ở giữa 1 Group Call — không đợi ICE timeout
 	// tự phát hiện PeerConnectionStateFailed (có độ trễ), disconnect WS là
 	// tín hiệu chắc chắn hơn để dọn ngay.
-	if groupRoomID != "" {
-		h.sfuManager.Leave(groupRoomID, c.userID)
+	if groupRoomID != "" && h.sfuManager.Leave(groupRoomID, c.userID) {
+		h.clearGroupRoom(ctx, groupRoomID)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), redisOpTimeout)
-	defer cancel()
 	if err := h.store.SetOffline(ctx, c.userID); err != nil {
 		log.Printf("signaling: SetOffline lỗi cho user %s: %v", c.userID, err)
+	}
+}
+
+// clearGroupRoom dọn RoomState + mapping active_group_call khi 1 Group Call
+// thực sự kết thúc (người cuối cùng vừa rời) — gọi từ unregister() (WS
+// ngắt) và handleCallEnd (rời chủ động).
+func (h *Hub) clearGroupRoom(ctx context.Context, roomID string) {
+	room, err := h.store.Get(ctx, roomID)
+	if err != nil {
+		log.Printf("signaling: đọc room %s trước khi dọn lỗi: %v", roomID, err)
+	}
+	if err := h.store.Delete(ctx, roomID); err != nil {
+		log.Printf("signaling: xoá room %s lỗi: %v", roomID, err)
+	}
+	if room != nil && room.ConversationID != "" {
+		if err := h.store.ClearActiveGroupCall(ctx, room.ConversationID); err != nil {
+			log.Printf("signaling: ClearActiveGroupCall lỗi cho conversation %s: %v", room.ConversationID, err)
+		}
 	}
 }
 

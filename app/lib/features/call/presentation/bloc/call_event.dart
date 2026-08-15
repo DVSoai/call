@@ -15,8 +15,12 @@ sealed class CallEvent with _$CallEvent {
   /// POST /calls/group. Khác outgoingCallRequested: không tạo offer P2P
   /// ngay, chỉ tạo room + gửi lời mời — SDP thật chỉ sinh ra sau khi từng
   /// người bấm Accept (join SFU), xem docs/CALL_SYSTEM.md §7.
+  ///
+  /// conversationId (group chat gốc) giúp Server nhận ra group này đang có
+  /// cuộc gọi sống để JOIN LẠI thay vì tạo room mới mỗi lần bấm gọi.
   const factory CallEvent.groupCallRequested({
     required List<String> participantIds,
+    String? conversationId,
   }) = CallGroupRequested;
 
   const factory CallEvent.acceptRequested() = CallAcceptRequested;

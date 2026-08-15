@@ -54,6 +54,13 @@ type RoomState struct {
 	// Không dùng cho ModeGroup (SFU tự renegotiate lại khi callee reconnect,
 	// không cần redeliver offer cũ).
 	OfferSDP string `json:"offerSdp,omitempty"`
+
+	// ConversationID — chỉ ModeGroup dùng, trỏ tới conversation nhắn tin
+	// (group chat) đã tạo ra cuộc gọi này. Dùng để tra "conversation X đang
+	// có cuộc gọi nhóm sống không" (SetActiveGroupCall/GetActiveGroupCall)
+	// — bấm "Gọi nhóm" lần 2 cho cùng 1 group phải JOIN LẠI room đang có,
+	// không tạo room mới đè lên.
+	ConversationID string `json:"conversationId,omitempty"`
 }
 
 // IsGroup trả về true nếu room này là Group Call (SFU) — helper tránh so
@@ -127,6 +134,75 @@ func (s *Store) MarkConnected(ctx context.Context, roomID string) error {
 func (s *Store) Delete(ctx context.Context, roomID string) error {
 	if err := s.rdb.Del(ctx, roomKey(roomID)).Err(); err != nil {
 		return fmt.Errorf("calls: Delete room: %w", err)
+	}
+	return nil
+}
+
+// ExtendGroupRoom gia hạn TTL room Group Call lên connectedTTL (6 giờ) —
+// gọi mỗi khi có người join SFU. Khác 1-1 (chỉ MarkConnected 1 lần lúc
+// callee duy nhất trả lời), Group Call có thể có người join muộn SAU KHI
+// room đã tồn tại quá ringingTTL (30s) — nếu không gia hạn, room (và cuộc
+// gọi đang diễn ra) sẽ tự "biến mất" khỏi Redis dù vẫn đang có người nói
+// chuyện (SFU sống độc lập trong bộ nhớ, không phụ thuộc Redis, nhưng
+// GetActiveGroupCall/redeliverPendingOffer thì có). Đồng thời gia hạn luôn
+// mapping active_group_call nếu room có ConversationID.
+func (s *Store) ExtendGroupRoom(ctx context.Context, roomID string) error {
+	room, err := s.Get(ctx, roomID)
+	if err != nil {
+		return err
+	}
+	if room == nil {
+		return fmt.Errorf("calls: ExtendGroupRoom: room %s không tồn tại", roomID)
+	}
+	room.Status = StatusConnected
+	data, err := json.Marshal(room)
+	if err != nil {
+		return fmt.Errorf("calls: marshal room: %w", err)
+	}
+	if err := s.rdb.Set(ctx, roomKey(roomID), data, connectedTTL).Err(); err != nil {
+		return fmt.Errorf("calls: ExtendGroupRoom: %w", err)
+	}
+	if room.ConversationID != "" {
+		if err := s.SetActiveGroupCall(ctx, room.ConversationID, roomID); err != nil {
+			return fmt.Errorf("calls: ExtendGroupRoom: refresh active mapping: %w", err)
+		}
+	}
+	return nil
+}
+
+func activeGroupCallKey(conversationID string) string {
+	return "active_group_call:" + conversationID
+}
+
+// SetActiveGroupCall đánh dấu conversation X đang có 1 Group Call sống ở
+// room nào — TTL connectedTTL, tự gia hạn mỗi khi có người join
+// (ExtendGroupRoom). Dùng để "Gọi nhóm" lần 2 cho cùng conversation JOIN
+// LẠI thay vì tạo room mới.
+func (s *Store) SetActiveGroupCall(ctx context.Context, conversationID, roomID string) error {
+	if err := s.rdb.Set(ctx, activeGroupCallKey(conversationID), roomID, connectedTTL).Err(); err != nil {
+		return fmt.Errorf("calls: SetActiveGroupCall: %w", err)
+	}
+	return nil
+}
+
+// GetActiveGroupCall trả về roomID đang sống cho conversation này, hoặc ""
+// nếu không có cuộc gọi nhóm nào đang diễn ra.
+func (s *Store) GetActiveGroupCall(ctx context.Context, conversationID string) (string, error) {
+	roomID, err := s.rdb.Get(ctx, activeGroupCallKey(conversationID)).Result()
+	if errors.Is(err, redis.Nil) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("calls: GetActiveGroupCall: %w", err)
+	}
+	return roomID, nil
+}
+
+// ClearActiveGroupCall xoá đánh dấu — gọi khi Group Call thực sự kết thúc
+// (room rỗng, người cuối cùng đã rời).
+func (s *Store) ClearActiveGroupCall(ctx context.Context, conversationID string) error {
+	if err := s.rdb.Del(ctx, activeGroupCallKey(conversationID)).Err(); err != nil {
+		return fmt.Errorf("calls: ClearActiveGroupCall: %w", err)
 	}
 	return nil
 }

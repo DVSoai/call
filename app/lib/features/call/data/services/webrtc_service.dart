@@ -172,21 +172,51 @@ class WebRtcService {
     return pc;
   }
 
+  /// Dọn dẹp theo từng bước, MỖI BƯỚC tự bắt lỗi riêng — 1 bước lỗi (vd.
+  /// native throw lúc dispose 1 MediaStream nhận từ SFU) không được phép
+  /// chặn các bước còn lại, và tuyệt đối không được để lỗi thoát ra ngoài
+  /// hàm này: nếu throw, CallBloc._onEndRequested phía trên sẽ dừng giữa
+  /// chừng, không bao giờ emit(idle) — user bấm cúp máy nhưng màn hình bị
+  /// kẹt nguyên tại chỗ (bug thật đã gặp).
   Future<void> dispose() async {
-    await localStream?.dispose();
-    await remoteStream?.dispose();
+    final pc = _peerConnection;
+    if (pc != null) {
+      // Gỡ callback TRƯỚC khi đóng — pc.close() có thể tự bắn thêm 1 sự
+      // kiện cuối (onConnectionState/onTrack...) cố add vào
+      // StreamController sắp bị đóng ngay bên dưới, gây "Bad state: Cannot
+      // add event after closing" nếu callback còn gắn.
+      pc.onIceCandidate = null;
+      pc.onTrack = null;
+      pc.onRemoveTrack = null;
+      pc.onConnectionState = null;
+    }
+
+    if (localStream != null) await _safeDispose(() => localStream!.dispose(), 'localStream');
+    if (remoteStream != null) await _safeDispose(() => remoteStream!.dispose(), 'remoteStream');
     for (final stream in groupRemoteStreams.values) {
-      await stream.dispose();
+      await _safeDispose(() => stream.dispose(), 'groupRemoteStream ${stream.id}');
     }
     groupRemoteStreams.clear();
-    await _peerConnection?.close();
-    await _peerConnection?.dispose();
+
+    if (pc != null) {
+      await _safeDispose(() => pc.close(), 'peerConnection.close');
+      await _safeDispose(() => pc.dispose(), 'peerConnection.dispose');
+    }
     _peerConnection = null;
     localStream = null;
     remoteStream = null;
-    await _remoteStreamController.close();
-    await _groupRemoteStreamsController.close();
-    await _localIceCandidateController.close();
-    await _connectionStateController.close();
+
+    await _safeDispose(() => _remoteStreamController.close(), 'remoteStreamController');
+    await _safeDispose(() => _groupRemoteStreamsController.close(), 'groupRemoteStreamsController');
+    await _safeDispose(() => _localIceCandidateController.close(), 'localIceCandidateController');
+    await _safeDispose(() => _connectionStateController.close(), 'connectionStateController');
+  }
+
+  Future<void> _safeDispose(Future<void> Function() action, String label) async {
+    try {
+      await action();
+    } catch (e, st) {
+      AppLogger.w('WebRtcService: dispose() lỗi ở bước "$label" (bỏ qua, tiếp tục dọn)', e, st);
+    }
   }
 }

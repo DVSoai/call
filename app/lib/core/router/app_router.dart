@@ -129,6 +129,7 @@ GoRouter buildAppRouter({required AuthBloc authBloc, required CallBloc callBloc}
             )..add(const ChatEvent.started()),
             child: ChatPage(
               title: args?.title ?? 'Trò chuyện',
+              conversationId: conversationId,
               peerId: args?.peerId,
               participantIds: args?.participantIds ?? const [],
             ),

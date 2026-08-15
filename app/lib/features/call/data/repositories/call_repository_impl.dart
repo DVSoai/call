@@ -33,9 +33,14 @@ class CallRepositoryImpl implements CallRepository {
   Future<Either<Failure, String>> createGroupCall({
     required List<String> participantIds,
     required String callType,
+    String? conversationId,
   }) async {
     try {
-      final roomId = await _remote.createGroupCall(participantIds: participantIds, callType: callType);
+      final roomId = await _remote.createGroupCall(
+        participantIds: participantIds,
+        callType: callType,
+        conversationId: conversationId,
+      );
       return Right(roomId);
     } on DioException catch (e) {
       return Left(Failure(AppException.fromDioException(e).message));
