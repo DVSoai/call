@@ -66,6 +66,11 @@ dependencies:
   sherpa_onnx: ^1.13.5
   record: ^6.1.1
   path_provider: ^2.1.5
+  # flutter_webrtc's MediaRecorder(audioChannel: OUTPUT) ghi audio người kia
+  # ra file .m4a (AAC, native MediaCodec/MediaMuxer bên Android — không phải
+  # WAV) — sherpa_onnx chỉ đọc được WAV, cần decode trước. Dùng native
+  # platform API (không kéo theo ffmpeg binary nặng vài chục MB).
+  audio_decoder: ^0.8.1
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:audio_decoder/audio_decoder.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/utils/app_logger.dart';
@@ -164,6 +167,83 @@ class WebRtcService {
 
   Future<void> selectAudioOutput(String deviceId) => Helper.selectAudioOutput(deviceId);
 
+  // ---- Ghi audio NGƯỜI KIA đang nói (Translated Call, §8) ----
+  // flutter_webrtc không expose PCM thô ra Dart (đã khảo sát native source:
+  // có sẵn ở Android/iOS nhưng chưa wrap) — MediaRecorder(audioChannel:
+  // OUTPUT) là API DUY NHẤT có sẵn để lấy audio người kia, nhưng ghi ra
+  // .m4a (AAC, MediaCodec/MediaMuxer bên Android) chứ không phải WAV, nên
+  // phải decode qua audio_decoder trước khi đưa vào sherpa_onnx (chỉ đọc
+  // WAV). Ghi xoay vòng từng đoạn ngắn thay vì 1 file dài — khớp tự nhiên
+  // với pipeline VAD cắt câu phía sau, không cần đọc file đang ghi dở.
+  static const _remoteAudioSegmentDuration = Duration(seconds: 4);
+
+  MediaRecorder? _remoteAudioRecorder;
+  bool _remoteAudioCaptureRunning = false;
+  final _remoteAudioSegmentController = StreamController<String>.broadcast();
+
+  /// Đường dẫn 1 file WAV (16kHz mono) mỗi khi ghi xong 1 đoạn ~4s.
+  Stream<String> get onRemoteAudioSegment => _remoteAudioSegmentController.stream;
+
+  Future<void> startRemoteAudioCapture() async {
+    if (_remoteAudioCaptureRunning) return;
+    _remoteAudioCaptureRunning = true;
+    unawaited(_remoteAudioCaptureLoop());
+  }
+
+  Future<void> _remoteAudioCaptureLoop() async {
+    final dir = await getTemporaryDirectory();
+    while (_remoteAudioCaptureRunning) {
+      final segmentId = DateTime.now().microsecondsSinceEpoch;
+      final aacPath = '${dir.path}/remote_audio_$segmentId.m4a';
+      try {
+        final recorder = MediaRecorder();
+        _remoteAudioRecorder = recorder;
+        await recorder.start(aacPath, audioChannel: RecorderAudioChannel.OUTPUT);
+        await Future<void>.delayed(_remoteAudioSegmentDuration);
+        await recorder.stop();
+        _remoteAudioRecorder = null;
+      } catch (e, st) {
+        AppLogger.w('WebRtcService: ghi đoạn audio người kia lỗi, bỏ qua đoạn này', e, st);
+        continue;
+      }
+      // Bị stopRemoteAudioCapture() gọi giữa lúc đang chờ — bỏ đoạn cuối,
+      // không cần decode/emit thêm.
+      if (!_remoteAudioCaptureRunning) break;
+
+      try {
+        final wavPath = '${dir.path}/remote_audio_$segmentId.wav';
+        await AudioDecoder.convertToWav(aacPath, wavPath, sampleRate: 16000, channels: 1);
+        unawaited(_deleteQuietly(aacPath));
+        if (!_remoteAudioSegmentController.isClosed) {
+          _remoteAudioSegmentController.add(wavPath);
+        }
+      } catch (e, st) {
+        AppLogger.w('WebRtcService: decode đoạn audio người kia sang WAV lỗi, bỏ qua đoạn này', e, st);
+      }
+    }
+  }
+
+  /// An toàn gọi kể cả khi chưa start hoặc đã dừng rồi. Tự dừng recorder
+  /// đang ghi dở ngay lập tức thay vì chờ hết đoạn hiện tại — phản hồi nhanh
+  /// khi user tắt phụ đề hoặc cúp máy.
+  Future<void> stopRemoteAudioCapture() async {
+    _remoteAudioCaptureRunning = false;
+    final recorder = _remoteAudioRecorder;
+    if (recorder != null) {
+      _remoteAudioRecorder = null;
+      await _safeDispose(() => recorder.stop(), 'remoteAudioRecorder.stop');
+    }
+  }
+
+  Future<void> _deleteQuietly(String path) async {
+    try {
+      await File(path).delete();
+    } catch (_) {
+      // File .m4a tạm đã decode xong — không xoá được cũng không sao, dọn ở
+      // dispose()/lần chạy sau, không ảnh hưởng luồng chính.
+    }
+  }
+
   RTCPeerConnection _requirePeerConnection() {
     final pc = _peerConnection;
     if (pc == null) {
@@ -179,6 +259,8 @@ class WebRtcService {
   /// chừng, không bao giờ emit(idle) — user bấm cúp máy nhưng màn hình bị
   /// kẹt nguyên tại chỗ (bug thật đã gặp).
   Future<void> dispose() async {
+    await _safeDispose(stopRemoteAudioCapture, 'remoteAudioCapture');
+
     final pc = _peerConnection;
     if (pc != null) {
       // Gỡ callback TRƯỚC khi đóng — pc.close() có thể tự bắn thêm 1 sự
@@ -210,6 +292,7 @@ class WebRtcService {
     await _safeDispose(() => _groupRemoteStreamsController.close(), 'groupRemoteStreamsController');
     await _safeDispose(() => _localIceCandidateController.close(), 'localIceCandidateController');
     await _safeDispose(() => _connectionStateController.close(), 'connectionStateController');
+    await _safeDispose(() => _remoteAudioSegmentController.close(), 'remoteAudioSegmentController');
   }
 
   Future<void> _safeDispose(Future<void> Function() action, String label) async {
