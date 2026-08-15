@@ -3,6 +3,7 @@ package signaling
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -142,6 +143,29 @@ func (h *Hub) invitePush(ctx context.Context, callerID, calleeID, roomID, callTy
 	if err := h.push.SendCallInvite(ctx, invite); err != nil {
 		log.Printf("signaling: gửi push cho room %s lỗi: %v", roomID, err)
 	}
+}
+
+// CreateGroupCall tạo 1 room Mode=group RINGING rồi mời toàn bộ
+// participantIds — dùng bởi REST handler POST /calls/group. Trả về roomID
+// để Client biết room nào để gọi tiếp POST /calls/:roomId/join lúc Accept.
+func (h *Hub) CreateGroupCall(ctx context.Context, creatorID string, participantIDs []string, callType string) (string, error) {
+	if callType == "" {
+		callType = "audio"
+	}
+	roomID := uuid.NewString()
+	room := calls.RoomState{
+		RoomID:       roomID,
+		CallType:     callType,
+		Mode:         calls.ModeGroup,
+		CreatedBy:    creatorID,
+		Participants: append([]string{creatorID}, participantIDs...),
+		CreatedAt:    time.Now(),
+	}
+	if err := h.store.CreateRinging(ctx, room); err != nil {
+		return "", fmt.Errorf("signaling: CreateGroupCall: %w", err)
+	}
+	h.InviteGroupParticipants(ctx, room, creatorID)
+	return roomID, nil
 }
 
 // InviteGroupParticipants mời từng participant vào 1 group room — dùng bởi

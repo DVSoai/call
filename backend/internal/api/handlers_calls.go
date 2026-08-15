@@ -90,3 +90,41 @@ func (rt *Router) handleRejectCall(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+type createGroupCallRequest struct {
+	ParticipantIDs []string `json:"participantIds" binding:"required,min=1"`
+	CallType       string   `json:"callType"`
+}
+
+// handleCreateGroupCall — POST /calls/group: tạo 1 Group Call (SFU) mời N
+// người — participantIds thường lấy từ 1 group conversation nhắn tin đã có
+// sẵn (không tự validate lại quan hệ bạn bè ở đây, đã validate lúc tạo
+// conversation đó rồi). Trả về roomId để Client gọi tiếp
+// POST /calls/:roomId/join lúc user bấm Accept — xem Hub.CreateGroupCall.
+func (rt *Router) handleCreateGroupCall(c *gin.Context) {
+	var req createGroupCallRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "thiếu participantIds hợp lệ"})
+		return
+	}
+	creatorID := auth.UserIDFromContext(c)
+	roomID, err := rt.hub.CreateGroupCall(c.Request.Context(), creatorID, req.ParticipantIDs, req.CallType)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "không thể tạo group call"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"roomId": roomID})
+}
+
+// handleJoinGroupCall — POST /calls/:roomId/join: user vừa bấm Accept,
+// chính thức tham gia SFU room — tạo Peer, Server tự sinh offer gửi xuống
+// qua WS (route lại đúng message type "offer" đã có, xem Hub.sendSFUOffer).
+func (rt *Router) handleJoinGroupCall(c *gin.Context) {
+	roomID := c.Param("roomId")
+	userID := auth.UserIDFromContext(c)
+	if err := rt.hub.JoinGroupCall(c.Request.Context(), roomID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "không thể tham gia group call"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}

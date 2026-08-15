@@ -68,6 +68,8 @@ func (rt *Router) Register(engine *gin.Engine) {
 		rest.POST("/devices/register-push-token", rt.handleRegisterPushToken)
 		rest.GET("/calls/history", rt.handleCallHistory)
 		rest.POST("/calls/:roomId/reject", rt.handleRejectCall)
+		rest.POST("/calls/group", rt.handleCreateGroupCall)
+		rest.POST("/calls/:roomId/join", rt.handleJoinGroupCall)
 		rest.GET("/turn-credentials", rt.handleTURNCredentials)
 
 		rest.POST("/contacts/requests", rt.handleSendContactRequest)
