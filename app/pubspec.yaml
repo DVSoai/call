@@ -63,7 +63,27 @@ dependencies:
   # (silero-vad) on-device, dùng chung 1 thư viện. record: thu mic ra file
   # WAV cho bài đo baseline độ trễ (§8.6c) — CHỈ dùng cho màn hình đo thử dev,
   # luồng gọi thật vẫn lấy audio qua flutter_webrtc như cũ.
-  sherpa_onnx: ^1.13.5
+  #
+  # GHIM CỨNG 1.13.3 (không dùng ^) — bản mới nhất TRƯỚC lúc sherpa_onnx bump
+  # onnxruntime lên 1.27.x (bắt đầu từ 1.13.4, xem CHANGELOG.md của package),
+  # nên vẫn bundle onnxruntime ~1.24.x cho Android — TRÙNG với bản chính thức
+  # có trên Maven Central. Bản mới hơn (1.13.4+) tự bundle onnxruntime 1.27.x
+  # — bản KHÔNG có trên Maven, tạo ra symbol version
+  # "OrtGetApiBase@VERS_1.27.x" xung khắc thẳng với "OrtGetApiBase@VERS_1.23.0"
+  # mà flutter_onnxruntime kéo về (hardcode trong android/build.gradle của
+  # chính plugin đó) — dlopen lỗi "cannot locate symbol OrtGetApiBase" vì
+  # bionic linker match versioned symbol tuyệt đối, không có bản .so nào
+  # thoả cả 2 bên cùng lúc. Đã verify bằng llvm-nm -D trên .so thật của cả 2
+  # bên trước khi ghim version này — xem thêm android/app/build.gradle.kts
+  # (chỗ force onnxruntime-android).
+  #
+  # KHÔNG dùng 1.12.39 (bản đã thử trước, cũng bundle onnxruntime 1.24.3) vì
+  # bản đó có bug: 4 gói native Android (arm64/armeabi/x86/x86_64) dùng
+  # CHUNG 1 namespace "com.k2fsa.sherpa.onnx" → AGP lỗi
+  # "Namespace ... is used in multiple modules". Bug này được fix ở 1.13.0
+  # ("Fix building Flutter Android APPs", #3559) — 1.13.3 vừa có fix đó vừa
+  # chưa bump onnxruntime.
+  sherpa_onnx: 1.13.3
   record: ^6.1.1
   path_provider: ^2.1.5
   # flutter_webrtc's MediaRecorder(audioChannel: OUTPUT) ghi audio người kia
@@ -98,6 +118,16 @@ dev_dependencies:
 # compileSdk lên 37, target hash "android-37" chưa tồn tại dạng trơn).
 dependency_overrides:
   permission_handler_android: 13.0.1
+  # sherpa_onnx khai "sherpa_onnx_android_*: ^<version>" — dấu ^ cho phép pub
+  # tự chọn bản MỚI HƠN (vd. 1.13.5, bản đang có sẵn trong cache), nên chỉ
+  # ghim mỗi package "sherpa_onnx" chính KHÔNG đủ ép các gói native con dùng
+  # đúng bản 1.13.3 (bundle onnxruntime ~1.24.x, có trên Maven). Không
+  # override thì pub âm thầm lấy lại 1.13.5 (bundle 1.27.1, không có trên
+  # Maven) — đúng lỗi "cannot locate symbol OrtGetApiBase" đã gặp.
+  sherpa_onnx_android_arm64: 1.13.3
+  sherpa_onnx_android_armeabi: 1.13.3
+  sherpa_onnx_android_x86: 1.13.3
+  sherpa_onnx_android_x86_64: 1.13.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

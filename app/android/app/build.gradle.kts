@@ -36,15 +36,27 @@ android {
         }
     }
 
-    // sherpa_onnx và flutter_onnxruntime đều tự đóng gói cùng 1 thư viện
-    // native libonnxruntime.so (cả 2 wrap onnxruntime, mỗi bên phân phối
-    // riêng) — Gradle không tự chọn được nên báo lỗi trùng file lúc merge.
-    // pickFirst lấy đại 1 bản, đủ dùng vì cả 2 cùng gọi chung 1 bộ C API
-    // onnxruntime chuẩn (không phải fork riêng khác API).
+    // sherpa_onnx (ghim 1.12.39, xem pubspec.yaml) và flutter_onnxruntime
+    // đều tự đóng gói libonnxruntime.so — giờ CÙNG bundle bản 1.24.3 nên
+    // nội dung file gần như giống nhau, pickFirst chỉ để Gradle hết báo lỗi
+    // trùng file lúc merge, không còn phải lo chọn nhầm bản (trước đây 2
+    // bên bundle 2 bản KHÁC NHAU — 1.27.1 vs 1.23.0 — pickFirst khi đó chỉ
+    // che được lỗi build, không giải quyết được lỗi runtime "cannot locate
+    // symbol OrtGetApiBase").
     packaging {
         jniLibs {
             pickFirsts += "**/libonnxruntime.so"
         }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        // flutter_onnxruntime hardcode "com.microsoft.onnxruntime:onnxruntime-android:1.23.0"
+        // trong chính android/build.gradle của nó — ép về đúng bản
+        // sherpa_onnx 1.12.39 đang bundle (1.24.3) để symbol version khớp
+        // nhau, xem giải thích đầy đủ ở pubspec.yaml.
+        force("com.microsoft.onnxruntime:onnxruntime-android:1.24.3")
     }
 }
 

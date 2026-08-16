@@ -17,18 +17,8 @@ typedef _MtDirection = ({
   int eosTokenId,
 });
 
-/// Tải + cache model cho Translated Call (docs/CALL_SYSTEM.md §8.3) — CHỈ
-/// tải khi user bật tính năng lần đầu, KHÔNG bundle sẵn trong repo/app
-/// assets. Bỏ qua tải lại nếu file đã có sẵn (check theo tên file, không
-/// cần checksum cho v1 — đủ dùng, tránh over-engineer).
-///
-/// v1 chỉ hỗ trợ Việt ⇄ Anh (xem kế hoạch) — 2 hướng dịch hardcode ở đây,
-/// thêm ngôn ngữ sau chỉ cần thêm 1 entry vào [_mtDirections], không đổi gì
-/// khác trong pipeline.
 class ModelDownloadService {
-  // Dio riêng, KHÔNG dùng chung instance của DioClient (core/network) — cái
-  // đó gắn baseUrl + interceptor auth cho API của chính app, không phù hợp
-  // để tải file tĩnh từ HuggingFace/GitHub (khác host, không cần auth).
+
   final Dio _dio = Dio();
 
   static const _whisperEncoderUrl =
